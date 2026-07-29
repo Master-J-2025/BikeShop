@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BikeShop - Repuestos y Accesorios</title>
+    <!-- Favicon -->
+    <link rel="icon" href="icon.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        accent: '#e74c3c',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                    },
+                    screens: {
+                        'xs': '475px',
+                        'sm': '640px',
+                        'md': '768px',
+                        'lg': '1024px',
+                        'xl': '1280px',
+                    },
+                },
+            },
+        };
+    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
+    </script>
+    <!-- EmailJS (browser SDK) - required for contact form; use CDN for quick local testing -->
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.dark {
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+        }
+        body.dark .card-white {
+            background-color: #2d2d2d;
+            border-color: #3d3d3d;
+        }
+        body.dark .bg-gray-50 { background-color: #1a1a1a; }
+        body.dark .bg-white { background-color: #2d2d2d; }
+        body.dark .text-gray-600 { color: #b0b0b0; }
+        body.dark .text-gray-500 { color: #9a9a9a; }
+        body.dark .text-gray-900 { color: #e5e5e5; }
+        body.dark .border-gray-200 { border-color: #3d3d3d; }
+        body.dark .bg-gray-100 { background-color: #252525; }
+        body.dark input, body.dark select, body.dark textarea {
+            background-color: #3d3d3d; color: #e5e5e5; border-color: #555;
+        }
+
+        .navbar-glass {
+            backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.92);
+        }
+        body.dark .navbar-glass { background: rgba(29,29,29,0.92); }
+
+        .hero-overlay {
+            background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(231,76,60,0.78) 100%);
+            box-shadow: inset 0 -70px 120px rgba(0,0,0,0.18);
+        }
+        body.dark .hero-overlay {
+            background: linear-gradient(135deg, rgba(2,6,23,0.98) 0%, rgba(124,45,18,0.86) 100%);
+        }
+
+        .gradient-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            transition: all 0.3s;
+        }
+        .gradient-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(231,76,60,0.4); }
+
+        .product-card {
+            transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s ease;
+            border: 1px solid rgba(255,255,255,0.6);
+            box-shadow: 0 18px 45px rgba(15,23,42,0.08);
+        }
+        .product-card:active { transform: scale(0.98); }
+        @media (hover: hover) {
+            .product-card:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 28px 60px rgba(15,23,42,0.16); }
+        }
+        body.dark .product-card {
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+        }
+        body.dark .product-card:hover { box-shadow: 0 28px 60px rgba(0,0,0,0.55); }
+
+        .badge-new { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .badge-discount { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+        .whatsapp-btn {
+            position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
+            border-radius: 50%; background: #25d366; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; z-index: 999; box-shadow: 0 6px 20px rgba(37,211,102,0.4);
+            animation: pulse-whatsapp 2s infinite; transition: 0.3s;
+        }
+        .whatsapp-btn:active { transform: scale(0.9); }
+        @keyframes pulse-whatsapp {
+            0%,100% { box-shadow: 0 6px 20px rgba(37,211,102,0.4); }
+            50% { box-shadow: 0 6px 35px rgba(37,211,102,0.7), 0 0 0 15px rgba(37,211,102,0.1); }
+        }
+
+        .star { color: #fbbf24; }
+
+        .section-title::after {
+            content: ''; display: block; width: 60px; height: 4px;
+            background: linear-gradient(135deg, #f97316, #e74c3c);
+            margin: 8px auto 0; border-radius: 2px;
+        }
+
+        /* Menú móvil */
+        #mobileMenu {
+            position: fixed; top: 0; left: -100%; width: 80%; max-width: 320px; height: 100%;
+            background: white; z-index: 1001; transition: left 0.3s ease;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.2); padding: 1.5rem;
+        }
+        body.dark #mobileMenu { background: #2d2d2d; }
+        #mobileMenu.active { left: 0; }
+        #menuOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+            display: none;
+        }
+        #menuOverlay.active { display: block; }
+
+        /* Admin panel responsivo */
+        .admin-panel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto; backdrop-filter: blur(5px); }
+        .admin-panel.active { display: flex; align-items: flex-start; justify-content: center; padding: 1rem; }
+        .admin-content { background: white; border-radius: 16px; padding: 1.5rem; max-width: 900px; width: 100%; }
+        body.dark .admin-content { background: #2d2d2d; }
+
+        .tour-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); z-index: 1200;
+            display: grid; place-items: center; padding: 1rem;
+        }
+        .tour-card {
+            width: min(100%, 860px); background: linear-gradient(135deg, #ffffff 0%, #fff8f4 100%);
+            border-radius: 28px; padding: 1.4rem; box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }
+        body.dark .tour-card { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: #f9fafb; }
+        .tour-pill {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem;
+            border-radius: 999px; background: rgba(231,76,60,0.12); color: #c2410c; font-weight: 700; font-size: 0.8rem;
+        }
+        body.dark .tour-pill { color: #fbbf24; background: rgba(251,191,36,0.14); }
+        .tour-progress { height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+        .tour-progress > div { height: 100%; background: linear-gradient(90deg, #f97316, #e74c3c); border-radius: inherit; transition: width 0.3s; }
+        body.dark .tour-progress { background: #374151; }
+    </style>
+    <style>
+        /* Tour highlight and popover animations */
+        #tourHighlight { transition: all 220ms ease; animation: tourPulse 3s infinite; border-radius: 12px; }
+        @keyframes tourPulse {
+            0% { box-shadow: 0 0 0 8px rgba(249,115,22,0.06); }
+            50% { box-shadow: 0 0 0 20px rgba(249,115,22,0.02); }
+            100% { box-shadow: 0 0 0 8px rgba(249,115,22,0.06); }
+        }
+        #tourPopover { transition: transform 220ms ease, opacity 220ms ease; opacity: 0; transform: translateY(6px) scale(0.98); }
+        #tourPopover.show { opacity: 1; transform: translateY(0) scale(1); }
+        #tourPopover.hide { opacity: 0; transform: translateY(6px) scale(0.98); }
+        #tourPopoverArrow { width:14px; height:14px; position:absolute; transform:rotate(45deg); background:#fff; box-shadow:0 4px 12px rgba(2,6,23,0.08); }
+    </style>
+    <style>
+        /* Reusable button styles for better contrast and focus outlines */
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.7rem; border-radius: 0.6rem; border: 1px solid transparent; background: transparent; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+        .btn:focus { outline: 3px solid rgba(231,76,60,0.22); outline-offset: 2px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+        .btn:active { transform: translateY(1px); }
+        .btn-contrast { background: #ffffff; color: #1f2937; border-color: rgba(0,0,0,0.06); }
+        body.dark .btn-contrast { background: #2b2b2b; color: #ffffff; border-color: rgba(255,255,255,0.03); }
+        .btn-ghost { background: transparent; border-color: transparent; }
+        /* Icon buttons */
+        .btn.icon { padding: 0.35rem; border-radius: 999px; }
+    </style>
+    <style>
+        /* Ensure close icons and modal buttons are visible in light and dark modes */
+        button.text-2xl { color: #1f2937; }
+        button.text-2xl i { color: inherit; }
+        button.text-2xl:hover { opacity: 0.9; }
+        body.dark button.text-2xl { color: #ffffff; }
+
+        /* Ensure buttons inside card-white / admin-content contrast correctly */
+        .card-white button, .admin-content button { color: #1f2937; }
+        body.dark .card-white button, body.dark .admin-content button { color: #ffffff; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-poppins">
+
+<!-- Barra superior (solo visible en md+) -->
+<!--<div class="bg-primary text-white py-2 text-sm hidden md:block">
+    <div class="container mx-auto px-4 flex justify-between">
+        <span><i class="fas fa-phone mr-2"></i> +1 (555) 123-4567</span>
+        <span><i class="fas fa-envelope mr-2"></i> info@bikeshop.com</span>
+    </div>
+</div>-->
+
+<!-- NAVBAR -->
+<nav class="navbar-glass sticky top-0 w-full border-b border-gray-200 z-50 shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <a href="#" data-section="inicio" class="flex items-center gap-2 text-primary font-bold text-2xl no-underline">
+            <i class="fas fa-bicycle text-orange-500 text-3xl"></i>
+            <span class="hidden xs:inline">BikeShop</span>
+        </a>
+        <!-- Buscador escritorio -->
+        <div class="hidden lg:flex flex-1 mx-6 max-w-xl">
+            <div class="relative w-full">
+                <input type="text" id="searchInput" placeholder="Buscar productos..."
+                class="w-full px-5 py-2.5 rounded-full bg-gray-100 border text-sm focus:ring-2 focus:ring-orange-500">
+                <button onclick="searchProducts()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold">Buscar</button>
+            </div>
+        </div>
+        <!-- Iconos -->
+        <div class="flex items-center gap-2">
+            <button onclick="openOnboardingGuide()" class="p-2.5 rounded-full hover:bg-gray-200" title="Guía rápida">
+                <i class="fas fa-compass text-lg"></i>
+            </button>
+            <button onclick="toggleDarkMode()" class="p-2.5 rounded-full hover:bg-gray-200" title="Modo oscuro">
+                <i class="fas fa-moon text-lg" id="darkIcon"></i>
+            </button>
+            <button id="favBtn" class="p-2.5 rounded-full hover:bg-gray-200 relative hidden sm:block" title="Favoritos">
+                <i class="fas fa-heart text-lg"></i>
+                <span id="favCount" class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+            <button id="cartBtn" class="p-2.5 rounded-full hover:bg-gray-200 relative" title="Carrito">
+                <i class="fas fa-shopping-cart text-lg"></i>
+                <span id="cartCount" class="absolute top-0 right-0 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+            <!-- Hamburguesa móvil -->
+            <button id="menuToggle" class="p-2.5 rounded-full hover:bg-gray-200 lg:hidden">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+    </div>
+    <!-- Navegación escritorio -->
+    <div class="hidden lg:flex justify-center gap-1 pb-2">
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-inicio').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-primary hover:bg-orange-100">Inicio</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-orange-100">Catálogo</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-ofertas').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-orange-100">Ofertas</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-blog').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-orange-100">Blog</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-nosotros').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-orange-100">Nosotros</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-contacto').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="nav-link px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-orange-100">Contacto</a>
+    </div>
+    <div class="container mx-auto px-4 pb-2">
+        <div id="devBanner" class="bg-slate-900/95 border border-slate-700 text-white text-sm font-semibold inline-flex items-center px-4 py-2 rounded-2xl shadow-lg backdrop-blur">
+            <!-- Banner de tiempo RD -->
+        </div>
+    </div>
+</nav>
+
+<!-- Menú lateral móvil -->
+<div id="menuOverlay" class="overlay"></div>
+<div id="mobileMenu">
+        <div class="flex justify-between items-center mb-8">
+        <span class="font-bold text-xl flex items-center gap-2"><i class="fas fa-bicycle text-orange-500"></i> BikeShop</span>
+        <button id="closeMenu" class="text-2xl text-gray-700 dark:text-white"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mb-6">
+        <input type="text" id="mobileSearch" placeholder="Buscar..." class="w-full px-4 py-3 rounded-lg bg-gray-100 border text-sm">
+        <button onclick="mobileSearch()" class="mt-2 w-full bg-orange-500 text-white py-2.5 rounded-lg font-semibold">Buscar</button>
+    </div>
+    <nav class="flex flex-col gap-1">
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-inicio').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">🏠 Inicio</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">📦 Catálogo</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-ofertas').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">🏷️ Ofertas</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-blog').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">📝 Blog</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-nosotros').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">ℹ️ Nosotros</a>
+        <a href="#" onclick="(event=>{event.preventDefault();document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-contacto').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();})(event)" class="block px-4 py-3 rounded-lg hover:bg-gray-100 font-medium">📞 Contacto</a>
+    </nav>
+</div>
+
+<!-- Guía interactiva inicial -->
+<!-- In-page guided tour: non-blocking popover + highlight -->
+<div id="tourHighlight" aria-hidden="true" style="display:none;position:absolute;z-index:1400;pointer-events:none;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);border:3px solid rgba(249,115,22,0.95);transition:all 220ms ease;"></div>
+<div id="tourPopover" style="display:none;position:absolute;z-index:1500;max-width:360px;border-radius:12px;background:linear-gradient(180deg,#fff,#fff);box-shadow:0 20px 50px rgba(2,6,23,0.3);padding:14px;border:1px solid rgba(0,0,0,0.06);">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
+        <strong id="tourPopoverTitle" style="font-size:1.05rem;color:#0f172a">Guía rápida</strong>
+        <button id="tourCloseBtn" aria-label="Cerrar guía" style="background:transparent;border:none;font-size:1.1rem;color:#0f172a;cursor:pointer">×</button>
+    </div>
+    <div id="tourPopoverText" style="font-size:0.95rem;color:#334155;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="tourPrevBtn" style="padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#0f172a;cursor:pointer">Anterior</button>
+        <button id="tourNextBtn" style="padding:6px 10px;border-radius:8px;background:linear-gradient(90deg,#f97316,#ef4444);color:white;border:none;cursor:pointer">Siguiente</button>
+    </div>
+    <div id="tourPopoverArrow" style="position:absolute;width:14px;height:14px;transform:rotate(45deg);background:#fff;border-left:1px solid rgba(0,0,0,0.06);border-top:1px solid rgba(0,0,0,0.06);"></div>
+</div>
+
+<!-- CONTENIDO PRINCIPAL -->
+<div id="main-content">
+    <!-- INICIO -->
+    <div id="seccion-inicio" class="section-page">
+        <!-- Hero responsivo -->
+        <section class="relative h-[60vh] xs:h-[70vh] flex items-center justify-center text-white overflow-hidden"
+        style="background-image: url('https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=1600&q=80'); background-size: cover; background-position: center;">
+        <div class="hero-overlay absolute inset-0"></div>
+        <div class="container mx-auto px-4 relative z-10 text-center">
+            <h1 class="text-3xl xs:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3 drop-shadow-lg">Repuestos y Accesorios</h1>
+            <p class="text-base md:text-xl mb-6 max-w-md mx-auto drop-shadow">Todo para tu bicicleta en un solo lugar.</p>
+            <div class="bg-white/90 backdrop-blur rounded-xl p-2 max-w-md mx-auto shadow flex gap-2">
+                <input type="text" id="heroSearch" placeholder="¿Qué necesitas?" class="flex-1 px-4 py-3 rounded-lg text-gray-800 text-sm focus:ring-2 focus:ring-orange-500">
+                <button onclick="searchFromHero()" class="bg-orange-500 text-white px-5 py-3 rounded-lg font-semibold text-sm">Buscar</button>
+            </div>
+                <button data-section="catalogo" class="mt-5 bg-white text-orange-600 px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-100 transition">Ver Catálogo ↓</button>
+        </div>
+    </section>
+    <!-- Categorías -->
+    <section class="py-12 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-2 text-center section-title">Categorías</h2>
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mt-8">
+                <div data-category="Frenos" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Frenos';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-stopwatch text-2xl text-red-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Frenos</p>
+                </div>
+                <div data-category="Cadenas" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Cadenas';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-link text-2xl text-blue-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Cadenas</p>
+                </div>
+                <div data-category="Llantas" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Llantas';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-circle text-2xl text-green-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Llantas</p>
+                </div>
+                <div data-category="Cascos" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Cascos';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-shield-alt text-2xl text-purple-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Cascos</p>
+                </div>
+                <div data-category="Guantes" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Guantes';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-hand-fist text-2xl text-orange-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Guantes</p>
+                </div>
+                <div data-category="Herramientas" onclick="(event=>{document.getElementById('categoryFilterSelect').value='Herramientas';document.querySelectorAll('.section-page').forEach(s=>s.classList.add('hidden'));document.getElementById('seccion-catalogo').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});})(event)" class="bg-gray-50 rounded-xl p-3 text-center shadow hover:shadow-lg cursor-pointer card-white">
+                    <i class="fas fa-toolbox text-2xl text-teal-500 mb-1"></i>
+                    <p class="text-xs font-semibold">Herram.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Productos destacados -->
+    <section class="py-12 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-2 text-center section-title">Destacados</h2>
+            <div id="featured-products-container" class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 mt-8"></div>
+        </div>
+    </section>
+    <!-- Marcas -->
+    <section class="py-12 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center section-title">Marcas</h2>
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-primary">
+                <div class="bg-white p-4 rounded-xl shadow card-white">SHIMANO</div>
+                <div class="bg-white p-4 rounded-xl shadow card-white">SRAM</div>
+                <div class="bg-white p-4 rounded-xl shadow card-white">MICHELIN</div>
+                <div class="bg-white p-4 rounded-xl shadow card-white">TREK</div>
+                <div class="bg-white p-4 rounded-xl shadow card-white">SPECIALIZED</div>
+                <div class="bg-white p-4 rounded-xl shadow card-white">GIANT</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- CATÁLOGO -->
+<div id="seccion-catalogo" class="section-page hidden">
+    <section class="py-12 bg-white min-h-screen">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 text-center section-title">Catálogo</h2>
+            <div class="flex justify-end mb-4">
+                <select id="categoryFilterSelect" onchange="filterCatalog()" class="border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500">
+                    <option value="Todas">Todas</option>
+                    <option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option>
+                </select>
+            </div>
+            <div id="catalog-products-container" class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </div>
+    </section>
+</div>
+
+<!-- OFERTAS -->
+<div id="seccion-ofertas" class="section-page hidden">
+    <section class="py-12 bg-gray-50 min-h-screen">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center section-title">Ofertas</h2>
+            <div id="offers-products-container" class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </div>
+    </section>
+</div>
+
+<!-- BLOG -->
+<div id="seccion-blog" class="section-page hidden">
+    <section class="py-12 bg-white min-h-screen">
+        <div class="container mx-auto px-4 max-w-3xl">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center section-title">Blog</h2>
+            <div id="blogPostsContainer" class="space-y-6"></div>
+        </div>
+    </section>
+</div>
+
+<!-- NOSOTROS -->
+<div id="seccion-nosotros" class="section-page hidden">
+    <section class="py-12 bg-gray-50 min-h-screen">
+        <div class="container mx-auto px-4 max-w-3xl text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 section-title">Nosotros</h2>
+            <p class="text-lg mb-6">Apasionados por el ciclismo desde 2015, ofreciendo repuestos y accesorios de calidad.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+                <div class="bg-white p-5 rounded-xl shadow card-white"><i class="fas fa-medal text-3xl text-orange-500 mb-2"></i><h3 class="font-bold">Calidad</h3></div>
+                <div class="bg-white p-5 rounded-xl shadow card-white"><i class="fas fa-truck-fast text-3xl text-orange-500 mb-2"></i><h3 class="font-bold">Envíos</h3></div>
+                <div class="bg-white p-5 rounded-xl shadow card-white"><i class="fas fa-headset text-3xl text-orange-500 mb-2"></i><h3 class="font-bold">Atención al cliente</h3></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- CONTACTO -->
+<div id="seccion-contacto" class="section-page hidden">
+    <section class="py-12 bg-white min-h-screen">
+        <div class="container mx-auto px-4 max-w-4xl">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center section-title">Contacto</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <form id="contactForm" onsubmit="submitContactForm(event)" class="space-y-4">
+                    <input id="contactName" name="name" type="text" placeholder="Nombre" required class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500">
+                    <input id="contactEmail" name="email" type="email" placeholder="Correo" required class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500">
+                    <textarea id="contactMessage" name="message" rows="4" placeholder="Mensaje" required class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500"></textarea>
+                    <button id="contactSubmitBtn" type="submit" class="gradient-btn text-white px-6 py-3 rounded-lg font-bold w-full">Enviar</button>
+                </form>
+                <div class="space-y-4">
+                    <div class="flex items-start gap-3"><i class="fas fa-map-marker-alt text-2xl text-orange-500"></i><div><strong>Dirección</strong><p class="text-gray-600">Sin direccion exacta</p></div></div>
+                    <div class="flex items-start gap-3"><i class="fas fa-phone text-2xl text-orange-500"></i><div><strong>Teléfono</strong><p class="text-gray-600">+1 (829)-261-2750<br>+1 (809) 216-9792</p></div></div>
+                    <div class="flex items-start gap-3"><i class="fas fa-envelope text-2xl text-orange-500"></i><div><strong>Email</strong><p class="text-gray-600">info@bikeshop.com</p></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- FOOTER -->
+<footer class="bg-primary text-white pt-12 pb-6">
+    <div class="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div>
+            <h3 class="font-bold text-xl mb-4 flex items-center gap-2"><i class="fas fa-bicycle text-orange-500"></i> BikeShop</h3>
+            <p class="text-gray-300 text-sm">Tu tienda de confianza para repuestos y accesorios.</p>
+            <div class="flex gap-3 mt-4">
+                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+        <div>
+            <h4 class="font-bold mb-3">Categorías</h4>
+            <ul class="space-y-1 text-sm text-gray-300">
+                <li><a href="#" data-category="Frenos" class="hover:text-orange-400">Frenos</a></li>
+                <li><a href="#" data-category="Cadenas" class="hover:text-orange-400">Cadenas</a></li>
+                <li><a href="#" data-category="Llantas" class="hover:text-orange-400">Llantas</a></li>
+                <li><a href="#" data-category="Cascos" class="hover:text-orange-400">Cascos</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4 class="font-bold mb-3">Enlaces</h4>
+            <ul class="space-y-1 text-sm text-gray-300">
+                <li><a href="#" data-section="inicio" class="hover:text-orange-400">Inicio</a></li>
+                <li><a href="#" data-section="catalogo" class="hover:text-orange-400">Catálogo</a></li>
+                <li><a href="#" data-section="ofertas" class="hover:text-orange-400">Ofertas</a></li>
+                <li><a href="#" data-section="contacto" class="hover:text-orange-400">Contacto</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4 class="font-bold mb-3">Contacto</h4>
+            <ul class="space-y-2 text-sm text-gray-300">
+                <li><i class="fas fa-phone text-orange-500 mr-2"></i> +1 (555) 123-4567</li>
+                <li><i class="fas fa-envelope text-orange-500 mr-2"></i> info@bikeshop.com</li>
+                <li><i class="fas fa-clock text-orange-500 mr-2"></i> Lun-Vie 9am-7pm</li>
+            </ul>
+        </div>
+    </div>
+    <div class="border-t border-white/10 pt-6 text-center text-gray-400 text-sm flex flex-col sm:flex-row justify-between items-center gap-2">
+        <span>&copy; 2026 BikeShop</span>
+        <!-- Admin oculto: accede con #admin en la búsqueda -->
+    </div>
+</footer>
+
+<!-- Botón WhatsApp -->
+<div class="whatsapp-btn" onclick="openWhatsApp()" title="Preguntar / Solicitar por WhatsApp" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></div>
+
+<!-- Modal Pedido -->
+<div id="orderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto card-white">
+            <div class="bg-gradient-to-r from-accent to-primary text-white p-4 flex justify-between items-center sticky top-0 rounded-t-2xl">
+            <div><h2 class="text-xl font-bold">Solicitar producto</h2><p id="modalProductName" class="text-sm opacity-90"></p></div>
+            <button onclick="closeOrderForm()" class="text-2xl text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <form onsubmit="submitOrder(event)" class="p-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <input type="text" id="orderName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="text" id="orderLastName" placeholder="Apellido *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="tel" id="orderWhatsApp" placeholder="WhatsApp *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="email" id="orderEmail" placeholder="Correo *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="number" id="orderQuantity" value="1" min="1" required class="w-full border rounded-lg px-3 py-2.5" placeholder="Cantidad">
+                <select id="orderProvince" required class="w-full border rounded-lg px-3 py-2.5"><option>Provincia...</option><option>Santo Domingo</option><option>Santiago</option></select>
+                <input type="text" id="orderCity" placeholder="Municipio *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="text" id="orderAddress" placeholder="Dirección *" required class="w-full border rounded-lg px-3 py-2.5">
+            </div>
+            <div><label class="font-semibold text-sm">Entrega:</label><div class="flex gap-4"><label><input type="radio" name="delivery" value="tienda" checked> Tienda</label><label><input type="radio" name="delivery" value="domicilio"> Domicilio</label></div></div>
+            <textarea placeholder="Comentario..." class="w-full border rounded-lg px-3 py-2.5" rows="2"></textarea>
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="closeOrderForm()" class="px-5 py-2.5 border rounded-lg">Cancelar</button>
+                <button type="submit" class="gradient-btn text-white px-6 py-2.5 rounded-lg font-bold">Enviar solicitud</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Panel Admin -->
+<div id="adminPanel" class="admin-panel">
+    <div class="admin-content">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Admin Productos</h2>
+            <button onclick="closeAdminPanel()" class="text-2xl text-gray-700 dark:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex gap-2 mb-4">
+            <button id="adminTabProducts" type="button" onclick="switchAdminTab('products')" class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold">Productos</button>
+            <button id="adminTabBlog" type="button" onclick="switchAdminTab('blog')" class="px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-200 font-semibold">Blog</button>
+            <button id="adminTabRequests" type="button" onclick="switchAdminTab('requests')" class="px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-200 font-semibold">Solicitudes</button>
+        </div>
+        <form id="adminProductForm" onsubmit="saveProductFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6">
+            <input type="hidden" id="editProductId">
+            <input type="text" id="adminName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2">
+            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option></select>
+            <input type="number" step="0.01" id="adminPrice" placeholder="Precio *" required class="w-full border rounded-lg px-3 py-2">
+            <input type="number" step="0.01" id="adminOldPrice" placeholder="Precio anterior" class="w-full border rounded-lg px-3 py-2">
+            <div class="col-span-2">
+                <label class="font-semibold text-sm">Imagen</label>
+                <input type="file" id="adminImageFile" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1">
+                <input type="text" id="adminImage" placeholder="URL imagen o deja vacío si subes archivo" class="w-full border rounded-lg px-3 py-2 mt-2">
+                <p class="text-xs text-gray-500 mt-1">Sube una imagen para que el producto se vea más completo. Si usas un link, el sitio será más ligero y eficiente.</p>
+                <div id="adminImagePreview" class="mt-2 hidden rounded-xl border border-dashed border-orange-300 bg-orange-50 p-2"></div>
+            </div>
+            <input type="text" id="adminRef" placeholder="Referencia" class="w-full border rounded-lg px-3 py-2">
+            <input type="number" step="0.1" id="adminRating" value="4.5" class="w-full border rounded-lg px-3 py-2">
+            <select id="adminStock" class="w-full border rounded-lg px-3 py-2"><option value="ok">En Stock</option><option value="low">Poco Stock</option></select>
+            <select id="adminBadge" class="w-full border rounded-lg px-3 py-2"><option value="none">Sin etiqueta</option><option value="new">Nuevo</option><option value="discount">Descuento</option></select>
+            <button type="submit" id="adminSubmitBtn" class="gradient-btn text-white py-2 rounded-lg font-bold col-span-2">Añadir Producto</button>
+        </form>
+        <form id="adminBlogForm" onsubmit="saveBlogPostFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6 hidden">
+            <input type="hidden" id="editBlogId">
+            <input type="text" id="adminBlogTitle" placeholder="Título del blog *" required class="w-full border rounded-lg px-3 py-2 col-span-2">
+            <input type="text" id="adminBlogExcerpt" placeholder="Resumen breve *" required class="w-full border rounded-lg px-3 py-2 col-span-2">
+            <div class="col-span-2">
+                <label class="font-semibold text-sm">Imagen destacada</label>
+                <input type="file" id="adminBlogImageFile" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1">
+                <input type="text" id="adminBlogImage" placeholder="URL imagen destacada o deja vacío si subes archivo" class="w-full border rounded-lg px-3 py-2 mt-2">
+                <div id="adminBlogImagePreview" class="mt-2 hidden rounded-xl border border-dashed border-orange-300 bg-orange-50 p-2"></div>
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold text-sm">Contenido</label>
+                <div id="blogEditor" class="h-40 bg-white border rounded-lg"></div>
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold text-sm">Productos relacionados</label>
+                <select id="adminBlogProducts" multiple class="w-full border rounded-lg px-3 py-2 h-28"></select>
+            </div>
+            <button type="submit" id="adminBlogSubmitBtn" class="gradient-btn text-white py-2 rounded-lg font-bold col-span-2">Guardar Blog</button>
+        </form>
+        <div id="adminProductList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+        <div id="adminBlogList" class="space-y-2 max-h-72 overflow-y-auto hidden"></div>
+        <div id="adminRequestList" class="space-y-2 max-h-72 overflow-y-auto hidden"></div>
+    </div>
+</div>
+
+<script>
+    // Productos iniciales
+    const defaultProducts = [
+        {id:1,name:'Frenos Shimano',category:'Frenos',price:89.99,oldPrice:112.50,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'FR-001',rating:4.5,stock:'ok',badge:'discount'},
+        {id:2,name:'Cadena KMC X12',category:'Cadenas',price:34.50,oldPrice:null,image:'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=500',ref:'CD-002',rating:5.0,stock:'ok',badge:'new'},
+        {id:3,name:'Llanta Michelin 27.5"',category:'Llantas',price:65.99,oldPrice:77.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'LL-003',rating:4.0,stock:'low',badge:'discount'},
+        {id:4,name:'Casco POC Omne',category:'Cascos',price:125.00,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'CS-004',rating:4.8,stock:'ok',badge:'none'},
+        {id:5,name:'Guantes Fox Ranger',category:'Guantes',price:39.99,oldPrice:null,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'GT-005',rating:4.2,stock:'ok',badge:'new'},
+        {id:6,name:'Herramientas Park Tool',category:'Herramientas',price:199.99,oldPrice:229.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'HT-006',rating:5.0,stock:'ok',badge:'discount'},
+        {id:7,name:'Neumático MTB 29"',category:'Llantas',price:49.99,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'NT-007',rating:4.3,stock:'ok',badge:'none'},
+        {id:8,name:'Manubrio Deore XT',category:'Frenos',price:89.99,oldPrice:105.99,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'MB-008',rating:4.6,stock:'ok',badge:'discount'}
+    ];
+    // --- Safe global fallbacks for inline onclicks (prevents ReferenceError) ---
+    (function(){
+        try{
+            window.closeFavorites = window.closeFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) fp.classList.remove('active'); document.body.style.overflow=''; };
+            window.openFavorites = window.openFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) fp.classList.add('active'); document.body.style.overflow='hidden'; };
+            window.closeCart = window.closeCart || function(){ const cm = document.getElementById('cartModal'); if(cm) cm.classList.add('hidden'); document.body.style.overflow=''; };
+            window.openCart = window.openCart || function(){ const cm = document.getElementById('cartModal'); if(cm) cm.classList.remove('hidden'); document.body.style.overflow='hidden'; };
+            window.closeOrderForm = window.closeOrderForm || function(){ const om = document.getElementById('orderModal'); if(om) om.classList.add('hidden'); document.body.style.overflow=''; };
+            window.closeAdminPanel = window.closeAdminPanel || function(){ const ap = document.getElementById('adminPanel'); if(ap) ap.classList.remove('active'); document.body.style.overflow=''; };
+        }catch(e){ console.warn('init fallback handlers failed', e); }
+    })();
+    const SUPABASE_URL = 'https://vjyjpldllxctthxujxwo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_UZzyrkER1ZptcTUuNwNyqA_oiKCvQUc';
+    let supabaseClient = null;
+
+    if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('tu-proyecto')) {
+        // use a different local variable name to avoid redeclaring the global `supabase`
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    // Admin WhatsApp number (use international format without +)
+    const ADMIN_WHATSAPP = '18292612750';
+    function sendWhatsAppMessage(text){
+        try { window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + encodeURIComponent(text), '_blank'); }
+        catch(e){ console.warn('No se pudo abrir WhatsApp', e); }
+    }
+
+    let products = [...defaultProducts];
+
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) return resolve('');
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result || '');
+            reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function previewImageFile(inputId, previewId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+        const file = input.files?.[0];
+        if (!file) {
+            preview.innerHTML = '';
+            preview.classList.add('hidden');
+            return;
+        }
+        try {
+            const dataUrl = await readFileAsDataUrl(file);
+            preview.innerHTML = `<img src="${dataUrl}" alt="Vista previa" class="w-full h-36 object-cover rounded-lg"><p class="text-xs text-gray-600 mt-2">${file.name}</p>`;
+            preview.classList.remove('hidden');
+        } catch (err) {
+            preview.innerHTML = '<p class="text-sm text-red-500">No se pudo preparar la vista previa.</p>';
+            preview.classList.remove('hidden');
+        }
+    }
+
+    function bindImagePreviewers() {
+        ['adminImageFile', 'adminBlogImageFile'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const previewId = id === 'adminImageFile' ? 'adminImagePreview' : 'adminBlogImagePreview';
+            input.addEventListener('change', () => previewImageFile(id, previewId));
+        });
+    }
+
+    // Favorites and Cart state (persisted in localStorage)
+    let favorites = new Set(JSON.parse(localStorage.getItem('bikeshop_favs') || '[]'));
+    let cart = JSON.parse(localStorage.getItem('bikeshop_cart') || '[]'); // [{id, qty}]
+
+    function saveFavs(){
+        localStorage.setItem('bikeshop_favs', JSON.stringify(Array.from(favorites)));
+        updateFavCount();
+    }
+    function saveCart(){
+        localStorage.setItem('bikeshop_cart', JSON.stringify(cart));
+        updateCartCount();
+    }
+    function updateFavCount(){ const el = document.getElementById('favCount'); if(el) el.textContent = favorites.size; }
+    function updateCartCount(){ const el = document.getElementById('cartCount'); if(el) el.textContent = cart.reduce((s,i)=>s+(i.qty||0),0); }
+
+    function toggleFav(id){
+        const pid = Number(id);
+        if(favorites.has(pid)) favorites.delete(pid); else favorites.add(pid);
+        saveFavs();
+        // update button icon if present
+        const btn = document.querySelector(`[data-fav-id=\"${pid}\"] i`);
+        if(btn) {
+            if(favorites.has(pid)) { btn.classList.remove('far'); btn.classList.add('fas'); }
+            else { btn.classList.remove('fas'); btn.classList.add('far'); }
+        }
+    }
+
+    function addToCart(id, qty=1){
+        const pid = Number(id);
+        const item = cart.find(c=>c.id===pid);
+        if(item) item.qty = (item.qty||0) + Number(qty);
+        else cart.push({id:pid, qty: Number(qty)});
+        saveCart();
+        // visual feedback
+        Swal.fire({icon:'success',title:'Añadido al carrito',timer:900,showConfirmButton:false,toast:true,position:'top-right'});
+    }
+
+    function removeFromCart(id){ cart = cart.filter(c=>c.id!==Number(id)); saveCart(); renderCartModal(); }
+
+    function openFavorites(){ renderFavoritesPanel(); document.getElementById('favPanel').classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeFavorites(){ document.getElementById('favPanel').classList.remove('active'); document.body.style.overflow=''; }
+
+    function openCart(){ renderCartModal(); document.getElementById('cartModal').classList.remove('hidden'); document.body.style.overflow='hidden'; }
+    function closeCart(){ document.getElementById('cartModal').classList.add('hidden'); document.body.style.overflow=''; }
+
+    function renderFavoritesPanel(){
+        const el = document.getElementById('favList');
+        if(!el) return;
+        const favArr = Array.from(favorites);
+        if(favArr.length===0) { el.innerHTML = '<div class="p-4 text-center"><p class="text-center text-gray-500">No hay favoritos</p><div class="mt-4 flex justify-center"><button onclick="closeFavorites()" class="px-4 py-2 border rounded">Cerrar</button></div></div>'; return; }
+        el.innerHTML = favArr.map(id=>{
+            const p = products.find(x=>x.id==id);
+            if(!p) return '';
+            return `
+            <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3"><img src="${p.image}" class="w-12 h-12 object-cover rounded" onerror="this.src='https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500'"><div><strong>${p.name}</strong><div class="text-sm text-gray-500">$${p.price.toFixed(2)}</div></div></div>
+                <div class="flex items-center gap-2"><button onclick="addToCart(${p.id})" class="px-3 py-1 bg-orange-500 text-white rounded">Añadir</button><button onclick="(function(){favorites.delete(${p.id});saveFavs();renderFavoritesPanel();})();" class="px-3 py-1 border rounded">Quitar</button></div>
+            </div>`;
+        }).join('') + '<div class="mt-4 p-3 text-right"><button onclick="closeFavorites()" class="px-4 py-2 border rounded">Cerrar</button></div>';
+    }
+
+    function renderCartModal(){
+        const el = document.getElementById('cartItems');
+        if(!el) return;
+        if(cart.length===0) {
+            el.innerHTML = '<p class="text-center text-gray-500">El carrito está vacío</p>';
+            document.getElementById('cartTotal').textContent='$0.00';
+            return;
+        }
+        let total = 0;
+        el.innerHTML = cart.map(ci=>{
+            const p = products.find(x=>x.id==ci.id);
+            if(!p) return '';
+            const line = (p.price * (ci.qty||1)); total += line;
+            return `
+            <div class="flex items-center justify-between p-2 border-b">
+                <div class="flex items-center gap-3"><img src="${p.image}" class="w-12 h-12 object-cover rounded"><div><strong>${p.name}</strong><div class="text-sm text-gray-500">$${p.price.toFixed(2)} x ${ci.qty}</div></div></div>
+                <div class="flex items-center gap-2"><button onclick="removeFromCart(${p.id})" class="text-red-500">Eliminar</button></div>
+            </div>`;
+        }).join('');
+        document.getElementById('cartTotal').textContent = '$'+total.toFixed(2);
+    }
+    async function submitCartRequest(){
+        if(cart.length===0) {
+            Swal.fire({icon:'info',title:'Carrito vacío',text:'Agrega productos para enviar una solicitud.',confirmButtonColor:'#e74c3c'});
+            return;
+        }
+        const items = cart.map(ci=>{
+            const p = products.find(x=>x.id==ci.id);
+            return p ? { id:p.id, name:p.name, qty:ci.qty, price:p.price } : null;
+        }).filter(Boolean);
+        const total = items.reduce((sum,item)=>sum+item.price*item.qty,0);
+        const request = {
+            id: Date.now(),
+            items,
+            total,
+            date: new Date().toLocaleString('es-ES'),
+            status: 'pendiente'
+        };
+        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]');
+        requests.push(request);
+        localStorage.setItem('bikeshop_requests', JSON.stringify(requests));
+        if (supabaseClient) {
+            try {
+                await supabaseClient.from('requests').insert([{ ...request, items: JSON.stringify(items) }]);
+            } catch (err) {
+                console.warn('No se pudo guardar la solicitud en Supabase', err);
+            }
+        }
+        // Enviar WhatsApp al admin con el resumen
+        try{
+            const msg = `Nueva solicitud: ${request.id}\nTotal: $${total.toFixed(2)}\nItems:\n${items.map(it=>`${it.qty}x ${it.name}`).join('\n')}`;
+            sendWhatsAppMessage(msg);
+        }catch(e){console.warn(e)}
+        cart = [];
+        saveCart();
+        renderCartModal();
+        closeCart();
+        Swal.fire({icon:'success',title:'Solicitud enviada',text:'El administrador recibirá tu solicitud de pedido.',confirmButtonColor:'#e74c3c'});
+    }
+
+    async function loadProducts() {
+        const cached = localStorage.getItem('bikeshop_prods');
+        if (cached) {
+            try { products = JSON.parse(cached); } catch (e) { console.warn('No se pudo leer el caché local', e); }
+        }
+
+        if (supabaseClient) {
+            try {
+                const { data, error } = await supabaseClient.from('products').select('*').order('id', { ascending: true });
+                if (!error && Array.isArray(data) && data.length) {
+                    products = data;
+                } else if (error) {
+                    console.warn('No se pudo cargar desde Supabase', error);
+                }
+            } catch (e) {
+                console.warn('No se pudo sincronizar con Supabase, se usará el almacenamiento local', e);
+            }
+        }
+
+        localStorage.setItem('bikeshop_prods', JSON.stringify(products));
+        renderAll();
+    }
+
+    async function save() {
+        localStorage.setItem('bikeshop_prods', JSON.stringify(products));
+        if (supabaseClient) {
+            try {
+                const { error } = await supabaseClient.from('products').upsert(products.map(p => ({ ...p })), { onConflict: 'id' });
+                if (error) {
+                    console.warn('No se pudo sincronizar con Supabase', error);
+                }
+            } catch (e) {
+                console.warn('No se pudo sincronizar con Supabase', e);
+            }
+        }
+    }
+
+    // Navegación
+    function navigateTo(section) {
+        document.querySelectorAll('.section-page').forEach(s => s.classList.add('hidden'));
+        document.getElementById('seccion-'+section).classList.remove('hidden');
+        window.scrollTo({top:0,behavior:'smooth'});
+        if(section==='catalogo') renderCatalog();
+        if(section==='ofertas') renderOffers();
+        if(section==='inicio') renderFeatured();
+    }
+
+    function mobileNavigate(section) {
+        navigateTo(section);
+        closeMobileMenu();
+    }
+
+    // Menú móvil
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuOverlay = document.getElementById('menuOverlay');
+    document.getElementById('menuToggle').addEventListener('click', ()=>{
+        mobileMenu.classList.add('active');
+        menuOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    document.getElementById('closeMenu').addEventListener('click', closeMobileMenu);
+    menuOverlay.addEventListener('click', closeMobileMenu);
+
+    function mobileSearch() {
+        const term = document.getElementById('mobileSearch').value.toLowerCase();
+        if(!term) return;
+        document.getElementById('searchInput').value = term;
+        searchProducts();
+        closeMobileMenu();
+    }
+
+    // Tarjeta producto
+    function createCard(p) {
+        const wsMsg = `Hola, quiero solicitar ${p.name} (Ref: ${p.ref||''}) - $${p.price.toFixed(2)}.`;
+        const wsMsgEsc = wsMsg.replace(/'/g, "\\'");
+        const badge = p.badge==='new'?'<span class="badge-new absolute top-2 right-2 text-white px-2 py-0.5 rounded-full text-xs font-bold">NUEVO</span>':
+                     p.badge==='discount'&&p.oldPrice?`<span class="badge-discount absolute top-2 right-2 text-white px-2 py-0.5 rounded-full text-xs font-bold">-${Math.round((1-p.price/p.oldPrice)*100)}%</span>`:'';
+        const oldPrice = p.oldPrice ? `<p class="text-xs text-gray-400 line-through">$${p.oldPrice.toFixed(2)}</p>` : '';
+        const stockIcon = p.stock==='low'?'fa-exclamation-triangle text-yellow-500':'fa-check-circle text-green-500';
+        const stars = Array.from({length:5},(_,i)=>i<p.rating? (i+0.5<p.rating?'<i class="fas fa-star star text-sm"></i>':'<i class="fas fa-star-half-alt star text-sm"></i>') : '<i class="far fa-star star text-sm"></i>').join('');
+        return `
+        <div class="product-card bg-white rounded-xl overflow-hidden shadow-md relative card-white">
+            <div class="relative h-44 bg-gray-200">
+                <img src="${p.image||'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500'}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500'">
+                ${badge}
+                <button data-fav-id="${p.id}" onclick="toggleFav(${p.id})" class="absolute top-2 left-2 bg-white/90 rounded-full p-2 shadow"><i class="${favorites.has(p.id)?'fas':'far'} fa-heart text-red-500"></i></button>
+                <button onclick="addToCart(${p.id})" class="absolute top-2 right-12 bg-white/90 rounded-full p-2 shadow"><i class="fas fa-cart-plus text-gray-800"></i></button>
+            </div>
+            <div class="p-3">
+                <p class="text-xs text-gray-400">${p.category}</p>
+                <h3 class="font-bold text-sm mt-1">${p.name}</h3>
+                <div class="flex items-center gap-1 my-1">${stars}<span class="text-xs ml-1">${p.rating}</span></div>
+                <div class="flex justify-between items-end mt-2">
+                    <div><p class="text-lg font-bold text-orange-500">$${p.price.toFixed(2)}</p>${oldPrice}</div>
+                    <span class="text-xs"><i class="fas ${stockIcon} mr-1"></i>${p.stock==='low'?'Poco':'Stock'}</span>
+                </div>
+                <div class="mt-3 flex gap-2">
+                    <button onclick="openOrderForm('${p.name}',${p.price})" class="flex-1 w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition">Solicitar</button>
+                    <button onclick="sendWhatsAppMessage('${wsMsgEsc}')" title="Pedir por WhatsApp" class="bg-green-500 text-white p-2 rounded-lg btn icon"><i class="fab fa-whatsapp"></i></button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderFeatured() {
+        document.getElementById('featured-products-container').innerHTML = products.slice(0,4).map(createCard).join('');
+    }
+    function renderCatalog(cat='Todas') {
+        const filtered = cat==='Todas'?products:products.filter(p=>p.category===cat);
+        document.getElementById('catalog-products-container').innerHTML = filtered.map(createCard).join('');
+    }
+    function renderOffers() {
+        const offers = products.filter(p=>p.oldPrice&&p.oldPrice>p.price);
+        document.getElementById('offers-products-container').innerHTML = offers.length?offers.map(createCard).join(''):'<p class="col-span-full text-center text-gray-500">No hay ofertas ahora</p>';
+    }
+
+    function filterByCategory(cat) {
+        navigateTo('catalogo');
+        document.getElementById('categoryFilterSelect').value = cat;
+        renderCatalog(cat);
+    }
+    function filterCatalog() { renderCatalog(document.getElementById('categoryFilterSelect').value); }
+
+    function searchProducts() {
+        const term = document.getElementById('searchInput').value.trim().toLowerCase();
+        if(!term) return;
+        if(term === '#admin' || term === 'admin') {
+            openAdminPanel();
+            return;
+        }
+        const results = products.filter(p=>p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term));
+        navigateTo('catalogo');
+        document.getElementById('catalog-products-container').innerHTML = results.length?results.map(createCard).join(''):'<p class="col-span-full text-center">Sin resultados</p>';
+    }
+    function searchFromHero() {
+        document.getElementById('searchInput').value = document.getElementById('heroSearch').value;
+        searchProducts();
+    }
+
+    // Modal pedido
+    function openOrderForm(name,price) {
+        document.getElementById('modalProductName').textContent = `Solicitud de ${name} - $${price}`;
+        document.getElementById('orderModal').classList.remove('hidden');
+        document.body.style.overflow='hidden';
+    }
+    function closeOrderForm() {
+        document.getElementById('orderModal').classList.add('hidden');
+        document.body.style.overflow='';
+    }
+    async function submitOrder(e) {
+        e.preventDefault();
+        const values = {
+            id: Date.now(),
+            product: document.getElementById('modalProductName').textContent,
+            name: document.getElementById('orderName').value,
+            lastName: document.getElementById('orderLastName').value,
+            whatsapp: document.getElementById('orderWhatsApp').value,
+            email: document.getElementById('orderEmail').value,
+            quantity: Number(document.getElementById('orderQuantity').value),
+            province: document.getElementById('orderProvince').value,
+            city: document.getElementById('orderCity').value,
+            address: document.getElementById('orderAddress').value,
+            comment: document.querySelector('#orderModal textarea').value,
+            date: new Date().toLocaleString('es-ES'),
+            status: 'pendiente'
+        };
+        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]');
+        requests.push(values);
+        localStorage.setItem('bikeshop_requests', JSON.stringify(requests));
+        if (supabaseClient) {
+            try {
+                await supabaseClient.from('requests').insert([{ ...values, related_products: JSON.stringify([]) }]);
+            } catch (err) {
+                console.warn('No se pudo guardar la solicitud en Supabase', err);
+            }
+        }
+        // Enviar notificación por WhatsApp al admin
+        try{
+            const msg = `Nueva solicitud: ${values.id}\n${values.product}\nNombre: ${values.name} ${values.lastName}\nWhatsApp: ${values.whatsapp}\nCantidad: ${values.quantity}\nProvincia: ${values.province}`;
+            sendWhatsAppMessage(msg);
+        }catch(e){console.warn(e)}
+        Swal.fire({icon:'success',title:'Solicitud enviada',text:'El administrador recibirá tu pedido.',confirmButtonColor:'#e74c3c'});
+        closeOrderForm();
+        e.target.reset();
+    }
+
+    const WHATSAPP_CONTACTS = [
+        { name: 'Janiel Aquino', phone: '18292612750', label: '+1 (829) 261-2750' },
+        { name: 'Jose Miguel', phone: '18292612879', label: '+1 (829) 261-2879' }
+    ];
+
+    function openWhatsApp(message){
+        const text = message && message.length ? message : 'Hola, tengo una consulta sobre sus productos. ¿Me pueden ayudar?';
+        try{
+            Swal.fire({
+                title: 'Contactar por WhatsApp',
+                html: `
+                    <p style="margin:0;font-size:0.95rem;color:#d1d5db;">Selecciona a quién quieres escribir:</p>
+                    <div style="display:grid;gap:0.8rem;margin-top:1rem;">
+                        ${WHATSAPP_CONTACTS.map(contact => `
+                            <button type="button" data-phone="${contact.phone}" class="whatsapp-select-btn" style="width:100%;padding:0.9rem 1rem;border:none;border-radius:0.75rem;background:#10b981;color:#fff;font-weight:700;cursor:pointer;text-align:left;box-shadow:0 12px 24px rgba(16,185,129,0.25);transition:transform .15s ease;">
+                                <strong>${contact.name}</strong><br><span style="font-size:0.95rem;opacity:0.9;">${contact.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true,
+                background: '#0f172a',
+                color: '#f8fafc',
+                didOpen: () => {
+                    const popup = Swal.getPopup();
+                    if (!popup) return;
+                    popup.querySelectorAll('button[data-phone]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const phone = btn.getAttribute('data-phone');
+                            window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
+                            Swal.close();
+                        });
+                    });
+                }
+            });
+        }catch(e){
+            window.open('https://wa.me/8292612750','_blank');
+        }
+    }
+
+    // Dark mode
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('darkMode',isDark);
+        document.getElementById('darkIcon').className = isDark?'fas fa-sun text-lg':'fas fa-moon text-lg';
+    }
+    if(localStorage.getItem('darkMode')==='true') { document.body.classList.add('dark'); document.getElementById('darkIcon').className='fas fa-sun text-lg'; }
+
+    const EMAILJS_SERVICE_ID = 'service_regspe8';
+    const EMAILJS_TEMPLATE_ID = 'template_kuls0xt';
+    const EMAILJS_PUBLIC_KEY = 'yn246cg5NCKMWpLIm'; // Reemplaza esta clave por la que ves en EmailJS Dashboard > Account
+
+    function submitContactForm(e){
+        e.preventDefault();
+        const button = document.getElementById('contactSubmitBtn');
+        const form = document.getElementById('contactForm');
+        const name = document.getElementById('contactName').value.trim();
+        const email = document.getElementById('contactEmail').value.trim();
+        const message = document.getElementById('contactMessage').value.trim();
+        if (!form || !name || !email || !message) return;
+
+        button.disabled = true;
+        button.textContent = 'Enviando...';
+
+        const now = new Date();
+        const timeText = new Intl.DateTimeFormat('es-DO', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        }).format(now);
+
+        form.querySelector('input[name="time"]')?.remove();
+        const hiddenTime = document.createElement('input');
+        hiddenTime.type = 'hidden';
+        hiddenTime.name = 'time';
+        hiddenTime.value = timeText;
+        form.appendChild(hiddenTime);
+
+        emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, form, EMAILJS_PUBLIC_KEY)
+            .then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Mensaje enviado',
+                    text: 'Gracias, tu mensaje ha sido enviado correctamente.',
+                    confirmButtonColor: '#e74c3c'
+                });
+                form.reset();
+            })
+            .catch((error) => {
+                console.error('EmailJS error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al enviar',
+                    text: error.status === 400 && error.text && error.text.includes('Public Key is invalid') ? 'Clave pública inválida. Revisa tu Public Key en EmailJS Dashboard.' : 'No se pudo enviar el mensaje. Intenta de nuevo más tarde.',
+                    confirmButtonColor: '#e74c3c'
+                });
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = 'Enviar';
+            });
+    }
+
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+
+    // Admin
+    function openAdminPrompt() {
+        Swal.fire({title:'Admin',input:'password',inputLabel:'Contraseña',inputPlaceholder:'admin123',showCancelButton:true}).then(r=>{if(r.isConfirmed&&r.value==='admin123') openAdminPanel();});
+    }
+    function openAdminPanel() {
+        document.getElementById('adminPanel').classList.add('active');
+        document.body.style.overflow='hidden';
+        renderAdminList();
+        initProductSelectOptions();
+        initBlogEditor();
+        switchAdminTab('products');
+    }
+    function closeAdminPanel() { document.getElementById('adminPanel').classList.remove('active'); document.body.style.overflow=''; }
+    function renderAdminList() {
+        document.getElementById('adminProductList').innerHTML = products.map(p=>`
+            <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                <span><strong>${p.name}</strong> - $${p.price}</span>
+                <div class="flex gap-2">
+                    <button onclick="editProduct(${p.id})" class="text-blue-500"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteProduct(${p.id})" class="text-red-500"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`).join('');
+        renderAdminBlogList();
+    }
+
+    function switchAdminTab(tab){
+        const productForm = document.getElementById('adminProductForm');
+        const blogForm = document.getElementById('adminBlogForm');
+        const productList = document.getElementById('adminProductList');
+        const blogList = document.getElementById('adminBlogList');
+        const reqList = document.getElementById('adminRequestList');
+        const productTab = document.getElementById('adminTabProducts');
+        const blogTab = document.getElementById('adminTabBlog');
+        const reqTab = document.getElementById('adminTabRequests');
+        if(tab==='blog'){
+            productForm.classList.add('hidden');
+            productList.classList.add('hidden');
+            blogForm.classList.remove('hidden');
+            blogList.classList.remove('hidden');
+            reqList.classList.add('hidden');
+            productTab.classList.remove('bg-orange-500'); productTab.classList.add('bg-white','text-gray-800');
+            blogTab.classList.add('bg-orange-500'); blogTab.classList.remove('bg-white','text-gray-800');
+            reqTab.classList.remove('bg-orange-500'); reqTab.classList.add('bg-white','text-gray-800');
+            renderAdminBlogList();
+        } else if(tab==='requests'){
+            productForm.classList.add('hidden');
+            productList.classList.add('hidden');
+            blogForm.classList.add('hidden');
+            blogList.classList.add('hidden');
+            reqList.classList.remove('hidden');
+            productTab.classList.remove('bg-orange-500'); productTab.classList.add('bg-white','text-gray-800');
+            blogTab.classList.remove('bg-orange-500'); blogTab.classList.add('bg-white','text-gray-800');
+            reqTab.classList.add('bg-orange-500'); reqTab.classList.remove('bg-white','text-gray-800');
+            renderAdminRequests();
+        } else {
+            productForm.classList.remove('hidden');
+            productList.classList.remove('hidden');
+            blogForm.classList.add('hidden');
+            blogList.classList.add('hidden');
+            reqList.classList.add('hidden');
+            productTab.classList.add('bg-orange-500'); productTab.classList.remove('bg-white','text-gray-800');
+            blogTab.classList.remove('bg-orange-500'); blogTab.classList.add('bg-white','text-gray-800');
+            reqTab.classList.remove('bg-orange-500'); reqTab.classList.add('bg-white','text-gray-800');
+        }
+    }
+
+    function renderAdminBlogList(){
+        const blogs = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]');
+        const container = document.getElementById('adminBlogList');
+        if(!container) return;
+        container.innerHTML = blogs.length?blogs.map(b=>`
+            <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                <div>
+                    <strong>${b.title}</strong>
+                    <p class="text-sm text-gray-500">${b.date} · ${b.related.length} productos relacionados</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="editBlogPost(${b.id})" class="text-blue-500"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteBlogPost(${b.id})" class="text-red-500"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`).join(''):'<p class="text-gray-500">No hay entradas de blog aún.</p>';
+    }
+
+    function editBlogPost(id){
+        const blogs = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]');
+        const post = blogs.find(b=>b.id==id);
+        if(!post) return;
+        document.getElementById('editBlogId').value=post.id;
+        document.getElementById('adminBlogTitle').value=post.title;
+        document.getElementById('adminBlogExcerpt').value=post.excerpt;
+        document.getElementById('adminBlogImage').value=post.image||'';
+        if(window.blogQuill) window.blogQuill.root.innerHTML = post.content||'';
+        const select = document.getElementById('adminBlogProducts');
+        Array.from(select.options).forEach(opt=>opt.selected = post.related.includes(Number(opt.value)));
+        document.getElementById('adminBlogSubmitBtn').textContent='Actualizar Blog';
+        const preview = document.getElementById('adminBlogImagePreview');
+        if(preview) {
+            preview.innerHTML = post.image ? `<img src="${post.image}" alt="Vista previa" class="w-full h-36 object-cover rounded-lg">` : '';
+            preview.classList.toggle('hidden', !post.image);
+        }
+        document.getElementById('adminBlogImageFile').value = '';
+        switchAdminTab('blog');
+    }
+
+    async function deleteBlogPost(id){
+        const blogs = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]').filter(b=>b.id!=id);
+        await saveBlogs(blogs);
+        renderAdminBlogList(); renderBlog();
+    }
+
+    function renderAdminRequests(){
+        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]').reverse();
+        const container = document.getElementById('adminRequestList');
+        if(!container) return;
+        if(requests.length===0){ container.innerHTML = '<p class="text-gray-500">No hay solicitudes.</p>'; return; }
+        container.innerHTML = requests.map(r=>{
+            const itemsHtml = r.items? r.items.map(it=>`<div class="text-sm">${it.qty}x ${it.name} - $${it.price}</div>`).join('') : '';
+            return `
+            <div class="bg-gray-100 p-3 rounded-lg">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <strong>Solicitud ${r.id}</strong>
+                        <p class="text-sm text-gray-500">${r.date} · ${r.status||'pendiente'}</p>
+                        <div class="mt-2 text-sm">${r.product||''}${itemsHtml?'<div class="mt-2"><strong>Items:</strong>'+itemsHtml+'</div>':''}</div>
+                        <div class="mt-2 text-sm">Contacto: ${r.whatsapp||r.phone||''} · ${r.email||''}</div>
+                    </div>
+                    <div class="flex flex-col gap-2 ml-3">
+                        <button onclick="(function(){navigator.clipboard?.writeText(JSON.stringify(r));Swal.fire({icon:'info',title:'Copiado',text:'Solicitud copiada al portapapeles',timer:900,showConfirmButton:false,toast:true,position:'top-right'});})();" class="px-3 py-1 border rounded">Copiar</button>
+                        <button onclick="(function(){ sendWhatsAppMessage('Solicitud '+r.id+' - '+(r.product||'pedido') ); Swal.fire({icon:'success',title:'Enviado a WhatsApp',timer:900,showConfirmButton:false,toast:true,position:'top-right'}); })()" class="px-3 py-1 bg-green-500 text-white rounded">Enviar WhatsApp</button>
+                        <button onclick="(function(){ r.status='atendida'; const all=JSON.parse(localStorage.getItem('bikeshop_requests')||'[]').map(x=>x.id===r.id?{...x,status:'atendida'}:x); localStorage.setItem('bikeshop_requests',JSON.stringify(all)); renderAdminRequests(); })()" class="px-3 py-1 bg-blue-500 text-white rounded">Marcar atendida</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function saveBlogs(blogs){
+        localStorage.setItem('bikeshop_blogs', JSON.stringify(blogs));
+        if(supabase){
+            try {
+                await supabaseClient.from('blogs').upsert(blogs.map(b=>({
+                    id: b.id,
+                    title: b.title,
+                    excerpt: b.excerpt,
+                    image: b.image,
+                    content: b.content,
+                    related: JSON.stringify(b.related||[]),
+                    date: b.date
+                })), { onConflict: 'id' });
+            } catch (err) {
+                console.warn('No se pudo guardar el blog en Supabase', err);
+            }
+        }
+    }
+    async function loadBlogs(){
+        let blogs = [];
+        if(supabase){
+            try {
+                const { data, error } = await supabaseClient.from('blogs').select('*').order('date', { ascending: false });
+                if(!error && Array.isArray(data) && data.length){
+                    blogs = data.map(b=>({
+                        id: b.id,
+                        title: b.title,
+                        excerpt: b.excerpt,
+                        image: b.image,
+                        content: b.content,
+                        related: Array.isArray(b.related)? b.related : (typeof b.related==='string'? JSON.parse(b.related||'[]'): []),
+                        date: b.date
+                    }));
+                }
+            } catch (err) {
+                console.warn('No se pudo cargar el blog desde Supabase', err);
+            }
+        }
+        const cached = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]');
+        if(blogs.length === 0 && cached.length) blogs = cached;
+        localStorage.setItem('bikeshop_blogs', JSON.stringify(blogs));
+        return blogs;
+    }
+    async function saveProductFromAdmin(e) {
+        e.preventDefault();
+        const id = document.getElementById('editProductId').value;
+        const uploadedFile = document.getElementById('adminImageFile').files?.[0];
+        let image = document.getElementById('adminImage').value.trim();
+        if (uploadedFile) {
+            image = await readFileAsDataUrl(uploadedFile);
+        }
+        const prod = {
+            id: id?parseInt(id):Date.now(),
+            name: document.getElementById('adminName').value,
+            category: document.getElementById('adminCategory').value,
+            price: parseFloat(document.getElementById('adminPrice').value),
+            oldPrice: document.getElementById('adminOldPrice').value?parseFloat(document.getElementById('adminOldPrice').value):null,
+            image: image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',
+            ref: document.getElementById('adminRef').value,
+            rating: parseFloat(document.getElementById('adminRating').value),
+            stock: document.getElementById('adminStock').value,
+            badge: document.getElementById('adminBadge').value
+        };
+        if(id) { const idx = products.findIndex(p=>p.id==id); if(idx!==-1) products[idx]=prod; }
+        else products.push(prod);
+        save(); renderAdminList(); renderAll(); initProductSelectOptions();
+        document.getElementById('adminProductForm').reset();
+        document.getElementById('editProductId').value='';
+        document.getElementById('adminSubmitBtn').textContent='Añadir Producto';
+        const preview = document.getElementById('adminImagePreview');
+        if(preview) { preview.innerHTML=''; preview.classList.add('hidden'); }
+    }
+
+    async function saveBlogPostFromAdmin(e){
+        e.preventDefault();
+        const id = document.getElementById('editBlogId').value;
+        const title = document.getElementById('adminBlogTitle').value;
+        const excerpt = document.getElementById('adminBlogExcerpt').value;
+        const uploadedFile = document.getElementById('adminBlogImageFile').files?.[0];
+        let image = document.getElementById('adminBlogImage').value.trim();
+        if (uploadedFile) {
+            image = await readFileAsDataUrl(uploadedFile);
+        }
+        const content = window.blogQuill ? window.blogQuill.root.innerHTML : '';
+        const related = Array.from(document.getElementById('adminBlogProducts').selectedOptions).map(o=>Number(o.value));
+        const post = { id: id?parseInt(id):Date.now(), title, excerpt, image, content, related, date: new Date().toLocaleDateString('es-ES') };
+        const blogs = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]');
+        if(id){ const idx = blogs.findIndex(b=>b.id==id); if(idx!==-1) blogs[idx]=post; }
+        else blogs.push(post);
+        await saveBlogs(blogs);
+        renderAdminBlogList(); renderBlog();
+        document.getElementById('adminBlogForm').reset();
+        if(window.blogQuill) window.blogQuill.setText('');
+        document.getElementById('editBlogId').value='';
+        document.getElementById('adminBlogSubmitBtn').textContent='Guardar Blog';
+        const preview = document.getElementById('adminBlogImagePreview');
+        if(preview) { preview.innerHTML=''; preview.classList.add('hidden'); }
+    }
+    function editProduct(id) {
+        const p = products.find(p=>p.id==id); if(!p) return;
+        document.getElementById('editProductId').value=p.id;
+        document.getElementById('adminName').value=p.name;
+        document.getElementById('adminCategory').value=p.category;
+        document.getElementById('adminPrice').value=p.price;
+        document.getElementById('adminOldPrice').value=p.oldPrice||'';
+        document.getElementById('adminImage').value=p.image||'';
+        document.getElementById('adminRef').value=p.ref||'';
+        document.getElementById('adminRating').value=p.rating;
+        document.getElementById('adminStock').value=p.stock;
+        document.getElementById('adminBadge').value=p.badge;
+        document.getElementById('adminSubmitBtn').textContent='Actualizar Producto';
+        const preview = document.getElementById('adminImagePreview');
+        if(preview) {
+            preview.innerHTML = p.image ? `<img src="${p.image}" alt="Vista previa" class="w-full h-36 object-cover rounded-lg">` : '';
+            preview.classList.toggle('hidden', !p.image);
+        }
+        document.getElementById('adminImageFile').value = '';
+    }
+    function deleteProduct(id) {
+        Swal.fire({title:'¿Eliminar?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){products=products.filter(p=>p.id!=id);save();renderAdminList();renderAll(); initProductSelectOptions();}});
+    }
+    function renderAll() {
+        if(!document.getElementById('seccion-inicio').classList.contains('hidden')) renderFeatured();
+        if(!document.getElementById('seccion-catalogo').classList.contains('hidden')) renderCatalog(document.getElementById('categoryFilterSelect')?.value||'Todas');
+        if(!document.getElementById('seccion-ofertas').classList.contains('hidden')) renderOffers();
+    }
+
+    function initProductSelectOptions(){
+        const select = document.getElementById('adminBlogProducts');
+        if(!select) return;
+        select.innerHTML = products.map(p=>`<option value="${p.id}">${p.name} - $${p.price.toFixed(2)}</option>`).join('');
+    }
+
+    function renderBlog(){
+        const blogContainer = document.getElementById('blogPostsContainer');
+        if(!blogContainer) return;
+        const blogs = JSON.parse(localStorage.getItem('bikeshop_blogs')||'[]');
+        if(blogs.length===0){ blogContainer.innerHTML='<p class="text-center text-gray-500">No hay entradas de blog por ahora.</p>'; return; }
+        blogContainer.innerHTML = blogs.map(b=>`
+            <article class="bg-gray-50 p-5 rounded-xl shadow card-white">
+                <h3 class="text-xl font-bold mb-2">${b.title}</h3>
+                <p class="text-gray-500 text-sm mb-2">${b.date}</p>
+                <p class="text-gray-700 mb-4">${b.excerpt}</p>
+                <div class="text-gray-600 mb-4">${b.content}</div>
+                ${b.related && b.related.length?`<div class="mt-4"><strong>Productos relacionados:</strong><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">${b.related.map(pid=>{
+                    const p = products.find(x=>x.id===pid);
+                    return p?`<div class="bg-white p-3 rounded-lg border"><strong>${p.name}</strong><p class="text-sm text-gray-500">$${p.price.toFixed(2)}</p></div>`:'';
+                }).join('')}</div></div>`:''}
+            </article>`).join('');
+    }
+
+    function initBlogEditor(){
+        const editorEl = document.getElementById('blogEditor');
+        if(!editorEl || window.blogQuill) return;
+        window.blogQuill = new Quill('#blogEditor', { theme: 'snow', placeholder: 'Escribe el contenido del blog aquí...' });
+    }
+
+    initBlogEditor();
+    bindImagePreviewers();
+
+    // Delegated click handler: fallback for inline onclicks if functions are not available yet
+    document.addEventListener('click', function(e){
+        const a = e.target.closest('a');
+        if(!a) return;
+        const href = a.getAttribute('href');
+        if(href !== '#') return;
+        const txt = a.textContent.trim();
+        const map = { 'Inicio':'inicio', 'Catálogo':'catalogo', 'Ofertas':'ofertas', 'Blog':'blog', 'Nosotros':'nosotros', 'Contacto':'contacto' };
+        const key = Object.keys(map).find(k => txt.includes(k));
+        if(key) {
+            e.preventDefault();
+            console.log('delegated anchor click detected:', txt);
+            const section = map[key];
+            try { if(typeof navigateTo === 'function'){ navigateTo(section); return; } } catch(e) {}
+            // fallback: directly toggle visibility
+            document.querySelectorAll('.section-page').forEach(s => s.classList.add('hidden'));
+            const el = document.getElementById('seccion-'+section);
+            if(el) el.classList.remove('hidden');
+            window.scrollTo({top:0,behavior:'smooth'});
+        }
+    }, true);
+
+    // Handle data-section, data-mobile and data-category attributes (preferred)
+    document.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-section], [data-mobile], [data-category]');
+        if(!el) return;
+        e.preventDefault();
+        console.log('delegated data click:', el.dataset);
+        const section = el.dataset.section || el.dataset.mobile;
+        if(section) {
+            try { if(typeof navigateTo === 'function'){ navigateTo(section); return; } } catch(e) {}
+            document.querySelectorAll('.section-page').forEach(s => s.classList.add('hidden'));
+            const target = document.getElementById('seccion-'+section);
+            if(target) target.classList.remove('hidden');
+            window.scrollTo({top:0,behavior:'smooth'});
+            if(el.dataset.mobile) closeMobileMenu();
+            return;
+        }
+        const cat = el.dataset.category;
+        if(cat) {
+            try { if(typeof filterByCategory === 'function'){ filterByCategory(cat); return; } } catch(e) {}
+            document.getElementById('categoryFilterSelect').value = cat;
+            navigateTo('catalogo');
+            renderCatalog(cat);
+        }
+    });
+
+    const tourSteps = [
+        { title: 'Inicio', text: 'Este es el inicio: aquí encuentras el hero, búsquedas rápidas y accesos directos al catálogo.', selector: 'a[data-section="inicio"]' },
+        { title: 'Buscar', text: 'Usa la barra de búsqueda para encontrar productos rápidamente.', selector: '#searchInput' },
+        { title: 'Catálogo', text: 'Explora el catálogo con filtros y agrega al carrito o favoritos.', selector: 'a[data-section="catalogo"]' },
+        { title: 'Favoritos', text: 'Guarda productos que te interesan para verlos más tarde.', selector: '#favBtn' },
+        { title: 'Carrito', text: 'Revisa los productos seleccionados y envía tu solicitud desde aquí.', selector: '#cartBtn' },
+        { title: 'Blog', text: 'Lee entradas del blog con consejos y lanzamientos.', selector: 'a[data-section="blog"]' },
+        { title: 'Contáctanos', text: 'Visita la sección de contacto para enviarnos mensajes o consultas.', selector: 'a[data-section="contacto"]' }
+    ];
+
+    var tourIndex = 0;
+    var tourActive = false;
+
+    function startTour(startIndex = 0) {
+        tourIndex = Math.max(0, Math.min(tourSteps.length - 1, startIndex));
+        tourActive = true;
+        localStorage.setItem('bikeshop_onboarding_seen', 'false');
+        showTourStep(tourIndex);
+        window.addEventListener('resize', onTourWindowChange);
+        window.addEventListener('scroll', onTourWindowChange, { passive: true });
+    }
+
+    function endTour() {
+        tourActive = false;
+        const hl = document.getElementById('tourHighlight');
+        const pop = document.getElementById('tourPopover');
+        if (hl) hl.style.display = 'none';
+        if (pop) { pop.classList.remove('show'); pop.classList.add('hide'); setTimeout(()=>{ pop.style.display = 'none'; }, 220); }
+        localStorage.setItem('bikeshop_onboarding_seen', 'true');
+        window.removeEventListener('resize', onTourWindowChange);
+        window.removeEventListener('scroll', onTourWindowChange);
+    }
+
+    function onTourWindowChange(){ if(tourActive) showTourStep(tourIndex); }
+
+    function showTourStep(index) {
+        tourIndex = Math.max(0, Math.min(tourSteps.length - 1, index));
+        const step = tourSteps[tourIndex];
+        const pop = document.getElementById('tourPopover');
+        const hl = document.getElementById('tourHighlight');
+        if(!pop || !hl) return;
+
+        // find target element
+        const target = document.querySelector(step.selector);
+        if (target) {
+            try { target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch(e){}
+        }
+
+        setTimeout(()=>{
+            let rect = { top: window.innerHeight/2, left: window.innerWidth/2, width: 300, height: 80 };
+            if (target) rect = target.getBoundingClientRect();
+            const scrollX = window.scrollX || window.pageXOffset;
+            const scrollY = window.scrollY || window.pageYOffset;
+            // position highlight
+            hl.style.display = 'block';
+            hl.style.left = (rect.left + scrollX - 8) + 'px';
+            hl.style.top = (rect.top + scrollY - 8) + 'px';
+            hl.style.width = (rect.width + 16) + 'px';
+            hl.style.height = (rect.height + 16) + 'px';
+
+            // populate popover
+            document.getElementById('tourPopoverTitle').textContent = step.title;
+            document.getElementById('tourPopoverText').textContent = step.text;
+            const prev = document.getElementById('tourPrevBtn');
+            const next = document.getElementById('tourNextBtn');
+            prev.disabled = tourIndex === 0;
+            prev.style.opacity = prev.disabled ? '0.5' : '1';
+            next.textContent = tourIndex === tourSteps.length -1 ? 'Finalizar' : 'Siguiente';
+
+            pop.style.display = 'block';
+            pop.classList.remove('hide');
+            pop.classList.add('show');
+            // position popover above or below target
+            const popW = Math.min(360, window.innerWidth - 40);
+            pop.style.maxWidth = popW + 'px';
+            const popH = pop.offsetHeight || 120;
+            let left = (rect.left + scrollX + rect.width/2) - (popW/2);
+            left = Math.max(12 + scrollX, Math.min(left, window.innerWidth - popW - 12 + scrollX));
+            let top = rect.top + scrollY - popH - 12;
+            if (top < scrollY + 8) top = rect.top + scrollY + rect.height + 12; // place below if no room
+            pop.style.left = left + 'px';
+            pop.style.top = top + 'px';
+
+            // arrow
+            const arrow = document.getElementById('tourPopoverArrow');
+            if(arrow){ arrow.style.left = (rect.left + scrollX + rect.width/2 - 7 - left) + 'px'; arrow.style.top = (top < rect.top + scrollY ? popH + 'px' : '-7px'); }
+
+        }, 320);
+    }
+
+    // wire popover controls
+    (function bindTourControls(){
+        const pop = document.getElementById('tourPopover');
+        if(!pop) return;
+        document.getElementById('tourNextBtn').addEventListener('click', ()=>{
+            if(tourIndex === tourSteps.length -1) return endTour();
+            showTourStep(tourIndex+1);
+        });
+        document.getElementById('tourPrevBtn').addEventListener('click', ()=>{ showTourStep(tourIndex-1); });
+        document.getElementById('tourCloseBtn').addEventListener('click', ()=> endTour());
+    })();
+
+    function openOnboardingGuide(){ startTour(0); }
+    function closeOnboardingGuide(){ endTour(); }
+
+    // Inicial
+    // Expose functions used by inline `onclick` attributes to `window` so
+    // they are available when elements are clicked (prevents ReferenceError
+    // if an inline handler runs before the script scope is available).
+    (function exposeGlobals(){
+        const names = [
+            'navigateTo','mobileNavigate','filterByCategory','filterCatalog','searchProducts','searchFromHero','mobileSearch',
+                'openOrderForm','closeOrderForm','submitOrder','openWhatsApp','toggleFav','toggleDarkMode','submitContactForm',
+                'openAdminPrompt','openAdminPanel','closeAdminPanel','saveProductFromAdmin','editProduct','deleteProduct',
+                'openFavorites','closeFavorites','openCart','closeCart','addToCart','removeFromCart','updateFavCount','updateCartCount'
+        ];
+        names.forEach(name => {
+            try {
+                const fn = window[name] || eval(name);
+                if (typeof fn === 'function') window[name] = fn;
+            } catch (e) {
+                // ignore missing names
+            }
+        });
+    })();
+    // Enhance important buttons: add `.btn` classes for consistent contrast and focus
+    (function enhanceButtons(){
+        try{
+            const areas = ['.admin-content','#cartModal','#orderModal','#favPanel','#mobileMenu','nav','footer'];
+            const set = new Set();
+            areas.forEach(sel=>{
+                document.querySelectorAll(sel+' button').forEach(b=>set.add(b));
+            });
+            // also include prominent action buttons by selector
+            document.querySelectorAll('button.gradient-btn, button[onclick^="close"], button[onclick^="open"], button.px-4, button.px-5').forEach(b=>set.add(b));
+            set.forEach(b=>{
+                if(!b.classList.contains('btn')) b.classList.add('btn');
+                // prefer contrast style for visible action buttons
+                if(!b.classList.contains('icon')) b.classList.add('btn-contrast');
+                // ensure icon-only close buttons are circular
+                const iconOnly = b.querySelector('i') && !b.textContent.trim();
+                if(iconOnly) b.classList.add('icon');
+            });
+        }catch(e){ console.warn('EnhanceButtons failed', e); }
+    })();
+
+    Promise.all([loadProducts(), loadBlogs()]).then(() => { 
+        updateFavCount();
+        updateCartCount();
+        initProductSelectOptions();
+        renderBlog();
+        if (localStorage.getItem('bikeshop_onboarding_seen') !== 'true') {
+            setTimeout(() => openOnboardingGuide(), 800);
+        }
+    });
+    // Ensure top buttons always open panels even if inline onclicks fail
+    (function attachTopButtons(){
+        const fb = document.getElementById('favBtn');
+        const cb = document.getElementById('cartBtn');
+        if(fb) fb.addEventListener('click', (e)=>{ e.preventDefault(); try{ openFavorites(); }catch(err){ renderFavoritesPanel(); const fp=document.getElementById('favPanel'); if(fp) fp.classList.add('active'); document.body.style.overflow='hidden'; }});
+        if(cb) cb.addEventListener('click', (e)=>{ e.preventDefault(); try{ openCart(); }catch(err){ renderCartModal(); const cm=document.getElementById('cartModal'); if(cm) cm.classList.remove('hidden'); document.body.style.overflow='hidden'; }});
+        // Fallback listener for dark mode toggle (ensures the button works even if inline handler fails)
+        const darkBtn = document.querySelector('[title="Modo oscuro"]');
+        if(darkBtn) darkBtn.addEventListener('click', (e)=>{ e.preventDefault(); try{ toggleDarkMode(); }catch(err){ console.warn('toggleDarkMode failed', err); }});
+    })();
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOrderForm();closeAdminPanel();closeCart();closeFavorites();closeOnboardingGuide();}});
+    document.getElementById('orderModal').addEventListener('click',function(e){if(e.target===this)closeOrderForm();});
+    const favPanel = document.getElementById('favPanel');
+    if(favPanel) favPanel.addEventListener('click', function(e){ if(e.target===this) closeFavorites(); });
+    const cartModalEl = document.getElementById('cartModal');
+    if(cartModalEl) cartModalEl.addEventListener('click', function(e){ if(e.target===this) closeCart(); });
+    // tour is in-page now; no overlay click handler required
+</script>
+<!-- DEV: debug banner, obvious typography change and runtime tests -->
+<style id="dev-debug-style">
+    /* small persistent banner (timestamp only) positioned below logo */
+    #devBanner { position: relative; left: auto; top: auto; background: rgba(30, 41, 59, 0.95); color: #F8FAFC; padding: 10px 14px; border-radius: 16px; font-weight: 700; z-index: auto; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); font-family: inherit; white-space: nowrap; line-height: 1.1; text-align: left; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(248, 250, 252, 0.16); backdrop-filter: blur(14px); }
+</style>
+<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script>
+    (function(){
+        const banner = document.getElementById('devBanner');
+        const timeFormatter = new Intl.DateTimeFormat('es-DO', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        const dateFormatter = new Intl.DateTimeFormat('es-DO', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        function getNow(){
+            return new Date();
+        }
+        function updateBanner(){
+            const now = getNow();
+            const timeText = timeFormatter.format(now);
+            const dateText = dateFormatter.format(now);
+            if(banner) banner.textContent = `${timeText} · ${dateText}`;
+        }
+        // initial update and then every second for live seconds
+        updateBanner();
+        const iv = setInterval(updateBanner, 1000);
+        // store interval ID so it can be cleared if needed
+        window._bikeShopDevInterval = iv;
+        console.log('BikeShop live timestamp started');
+        // robust global listener for dark toggle (works even if inline/onload order varies)
+        document.addEventListener('click', function(e){
+            const btn = e.target.closest('[title="Modo oscuro"]');
+            if(!btn) return;
+            try{ toggleDarkMode(); }catch(err){ console.warn('toggleDarkMode failed', err); }
+        });
+    })();
+</script>
+<script src="../bike-fallbacks.js"></script>
+</body>
+</html>
