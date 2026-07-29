@@ -849,17 +849,36 @@
         renderAll();
     }
 
+    function buildSupabaseProduct(product) {
+        return {
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            oldPrice: product.oldPrice,
+            image: product.image,
+            ref: product.ref,
+            rating: product.rating,
+            stock: product.stock,
+            badge: product.badge
+        };
+    }
+
     async function save() {
         localStorage.setItem('bikeshop_prods', JSON.stringify(products));
-        if (supabaseClient) {
-            try {
-                const { error } = await supabaseClient.from('products').upsert(products.map(p => ({ ...p })), { onConflict: 'id' });
-                if (error) {
-                    console.warn('No se pudo sincronizar con Supabase', error);
-                }
-            } catch (e) {
-                console.warn('No se pudo sincronizar con Supabase', e);
+        if (!supabaseClient) {
+            return false;
+        }
+        try {
+            const { error } = await supabaseClient.from('products').upsert(products.map(buildSupabaseProduct), { onConflict: 'id' });
+            if (error) {
+                console.warn('No se pudo sincronizar con Supabase', error);
+                return false;
             }
+            return true;
+        } catch (e) {
+            console.warn('No se pudo sincronizar con Supabase', e);
+            return false;
         }
     }
 
@@ -1358,11 +1377,20 @@
         }
 
         localStorage.setItem('bikeshop_prods', JSON.stringify(products));
-        await save();
+        const synced = await save();
         renderAdminList();
         renderAll();
         initProductSelectOptions();
         document.getElementById('adminProductForm').reset();
+        if (!synced) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Guardado local',
+                text: 'El producto se guardó en este dispositivo, pero no se sincronizó con el servidor. No aparecerá en otros dispositivos hasta que se restaure la conexión o se corrija Supabase.',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        }
         document.getElementById('editProductId').value = '';
         document.getElementById('adminSubmitBtn').textContent = 'Añadir Producto';
         const descriptionInput = document.getElementById('adminDescription');
