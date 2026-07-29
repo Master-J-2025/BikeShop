@@ -580,9 +580,11 @@
         <form id="adminProductForm" onsubmit="saveProductFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6">
             <input type="hidden" id="editProductId">
             <input type="text" id="adminName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2">
-            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Body</option><option>Luces</option><option>Herramientas</option></select>
+            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option></select>
             <input type="number" step="0.01" id="adminPrice" placeholder="Precio *" required class="w-full border rounded-lg px-3 py-2">
             <input type="number" step="0.01" id="adminOldPrice" placeholder="Precio anterior" class="w-full border rounded-lg px-3 py-2">
+            <textarea id="adminDescription" rows="2" placeholder="Descripción breve" class="col-span-2 w-full border rounded-lg px-3 py-2"></textarea>
+            <textarea id="adminSpecs" rows="3" placeholder="Especificaciones" class="col-span-2 w-full border rounded-lg px-3 py-2"></textarea>
             <div class="col-span-2">
                 <label class="font-semibold text-sm">Imagen</label>
                 <input type="file" id="adminImageFile" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1">
@@ -623,6 +625,17 @@
 </div>
 
 <script>
+    // Productos iniciales
+    const defaultProducts = [
+        {id:1,name:'Frenos Shimano',category:'Frenos',price:89.99,oldPrice:112.50,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'FR-001',rating:4.5,stock:'ok',badge:'discount'},
+        {id:2,name:'Cadena KMC X12',category:'Cadenas',price:34.50,oldPrice:null,image:'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=500',ref:'CD-002',rating:5.0,stock:'ok',badge:'new'},
+        {id:3,name:'Llanta Michelin 27.5"',category:'Llantas',price:65.99,oldPrice:77.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'LL-003',rating:4.0,stock:'low',badge:'discount'},
+        {id:4,name:'Casco POC Omne',category:'Cascos',price:125.00,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'CS-004',rating:4.8,stock:'ok',badge:'none'},
+        {id:5,name:'Guantes Fox Ranger',category:'Guantes',price:39.99,oldPrice:null,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'GT-005',rating:4.2,stock:'ok',badge:'new'},
+        {id:6,name:'Herramientas Park Tool',category:'Herramientas',price:199.99,oldPrice:229.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'HT-006',rating:5.0,stock:'ok',badge:'discount'},
+        {id:7,name:'Neumático MTB 29"',category:'Llantas',price:49.99,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'NT-007',rating:4.3,stock:'ok',badge:'none'},
+        {id:8,name:'Manubrio Deore XT',category:'Frenos',price:89.99,oldPrice:105.99,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'MB-008',rating:4.6,stock:'ok',badge:'discount'}
+    ];
     // --- Safe global fallbacks for inline onclicks (prevents ReferenceError) ---
     (function(){
         try{
@@ -898,6 +911,8 @@
         const oldPrice = p.oldPrice ? `<p class="text-xs text-gray-400 line-through">$${p.oldPrice.toFixed(2)}</p>` : '';
         const stockIcon = p.stock==='low'?'fa-exclamation-triangle text-yellow-500':'fa-check-circle text-green-500';
         const stars = Array.from({length:5},(_,i)=>i<p.rating? (i+0.5<p.rating?'<i class="fas fa-star star text-sm"></i>':'<i class="fas fa-star-half-alt star text-sm"></i>') : '<i class="far fa-star star text-sm"></i>').join('');
+        const description = p.description ? `<p class="text-xs text-gray-500 mt-2 line-clamp-2">${p.description}</p>` : '';
+        const specs = p.specs ? `<p class="text-[11px] text-gray-400 mt-1">${p.specs}</p>` : '';
         return `
         <div class="product-card bg-white rounded-xl overflow-hidden shadow-md relative card-white">
             <div class="relative h-44 bg-gray-200">
@@ -914,6 +929,8 @@
                     <div><p class="text-lg font-bold text-orange-500">$${p.price.toFixed(2)}</p>${oldPrice}</div>
                     <span class="text-xs"><i class="fas ${stockIcon} mr-1"></i>${p.stock==='low'?'Poco':'Stock'}</span>
                 </div>
+                ${description}
+                ${specs}
                 <div class="mt-3 flex gap-2">
                     <button onclick="openOrderForm('${p.name}',${p.price})" class="flex-1 w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition">Solicitar</button>
                     <button onclick="sendWhatsAppMessage('${wsMsgEsc}')" title="Pedir por WhatsApp" class="bg-green-500 text-white p-2 rounded-lg btn icon"><i class="fab fa-whatsapp"></i></button>
@@ -923,7 +940,8 @@
     }
 
     function renderFeatured() {
-        document.getElementById('featured-products-container').innerHTML = products.slice(0,4).map(createCard).join('');
+        const featured = products.slice(-4).reverse();
+        document.getElementById('featured-products-container').innerHTML = featured.map(createCard).join('');
     }
     function renderCatalog(cat='Todas') {
         const filtered = cat==='Todas'?products:products.filter(p=>p.category===cat);
@@ -1117,7 +1135,8 @@
         Swal.fire({title:'Admin',input:'password',inputLabel:'Contraseña',inputPlaceholder:'admin123',showCancelButton:true}).then(r=>{if(r.isConfirmed&&r.value==='admin123') openAdminPanel();});
     }
     function openAdminPanel() {
-        document.getElementById('adminPanel').classList.add('active');
+        const panel = document.getElementById('adminPanel');
+        if (panel) panel.classList.add('active');
         document.body.style.overflow='hidden';
         renderAdminList();
         initProductSelectOptions();
@@ -1299,26 +1318,68 @@
         if (uploadedFile) {
             image = await readFileAsDataUrl(uploadedFile);
         }
+
+        const name = document.getElementById('adminName').value.trim();
+        const category = document.getElementById('adminCategory').value;
+        const price = parseFloat(document.getElementById('adminPrice').value);
+        const oldPrice = document.getElementById('adminOldPrice').value ? parseFloat(document.getElementById('adminOldPrice').value) : null;
+        const ref = document.getElementById('adminRef').value.trim();
+        const rating = parseFloat(document.getElementById('adminRating').value) || 4.5;
+        const stock = document.getElementById('adminStock').value;
+        const badge = document.getElementById('adminBadge').value;
+        const description = document.getElementById('adminDescription').value.trim();
+        const specs = document.getElementById('adminSpecs').value.trim();
+
+        if (!name || Number.isNaN(price)) {
+            Swal.fire({ icon: 'warning', title: 'Completa los datos', text: 'El nombre y el precio son obligatorios.' });
+            return;
+        }
+
         const prod = {
-            id: id?parseInt(id):Date.now(),
-            name: document.getElementById('adminName').value,
-            category: document.getElementById('adminCategory').value,
-            price: parseFloat(document.getElementById('adminPrice').value),
-            oldPrice: document.getElementById('adminOldPrice').value?parseFloat(document.getElementById('adminOldPrice').value):null,
+            id: id ? parseInt(id, 10) : Date.now(),
+            name,
+            category,
+            price,
+            oldPrice,
             image: image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',
-            ref: document.getElementById('adminRef').value,
-            rating: parseFloat(document.getElementById('adminRating').value),
-            stock: document.getElementById('adminStock').value,
-            badge: document.getElementById('adminBadge').value
+            ref,
+            rating,
+            stock,
+            badge,
+            description,
+            specs
         };
-        if(id) { const idx = products.findIndex(p=>p.id==id); if(idx!==-1) products[idx]=prod; }
-        else products.push(prod);
-        save(); renderAdminList(); renderAll(); initProductSelectOptions();
+
+        if (id) {
+            const idx = products.findIndex((p) => p.id == id);
+            if (idx !== -1) products[idx] = prod;
+        } else {
+            products.push(prod);
+        }
+
+        localStorage.setItem('bikeshop_prods', JSON.stringify(products));
+        await save();
+        renderAdminList();
+        renderAll();
+        initProductSelectOptions();
         document.getElementById('adminProductForm').reset();
-        document.getElementById('editProductId').value='';
-        document.getElementById('adminSubmitBtn').textContent='Añadir Producto';
+        document.getElementById('editProductId').value = '';
+        document.getElementById('adminSubmitBtn').textContent = 'Añadir Producto';
+        const descriptionInput = document.getElementById('adminDescription');
+        const specsInput = document.getElementById('adminSpecs');
+        if (descriptionInput) descriptionInput.value = '';
+        if (specsInput) specsInput.value = '';
         const preview = document.getElementById('adminImagePreview');
-        if(preview) { preview.innerHTML=''; preview.classList.add('hidden'); }
+        if (preview) {
+            preview.innerHTML = '';
+            preview.classList.add('hidden');
+        }
+
+        if (document.getElementById('seccion-catalogo').classList.contains('hidden')) {
+            document.getElementById('seccion-catalogo').classList.remove('hidden');
+        }
+
+        Swal.fire({ icon: 'success', title: 'Producto guardado', text: 'Ya aparece en el catálogo y en los módulos de inicio.', timer: 1200, showConfirmButton: false });
     }
 
     async function saveBlogPostFromAdmin(e){
@@ -1370,9 +1431,9 @@
         Swal.fire({title:'¿Eliminar?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){products=products.filter(p=>p.id!=id);save();renderAdminList();renderAll(); initProductSelectOptions();}});
     }
     function renderAll() {
-        if(!document.getElementById('seccion-inicio').classList.contains('hidden')) renderFeatured();
-        if(!document.getElementById('seccion-catalogo').classList.contains('hidden')) renderCatalog(document.getElementById('categoryFilterSelect')?.value||'Todas');
-        if(!document.getElementById('seccion-ofertas').classList.contains('hidden')) renderOffers();
+        renderFeatured();
+        renderCatalog(document.getElementById('categoryFilterSelect')?.value || 'Todas');
+        renderOffers();
     }
 
     function initProductSelectOptions(){
