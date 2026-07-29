@@ -541,7 +541,7 @@
         <form id="adminProductForm" onsubmit="saveProductFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6">
             <input type="hidden" id="editProductId">
             <input type="text" id="adminName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2">
-            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option></select>
+            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Luces</option><option>Herramientas</option></select>
             <input type="number" step="0.01" id="adminPrice" placeholder="Precio *" required class="w-full border rounded-lg px-3 py-2">
             <input type="number" step="0.01" id="adminOldPrice" placeholder="Precio anterior" class="w-full border rounded-lg px-3 py-2">
             <div class="col-span-2">
@@ -584,17 +584,6 @@
 </div>
 
 <script>
-    // Productos iniciales
-    const defaultProducts = [
-        {id:1,name:'Frenos Shimano',category:'Frenos',price:89.99,oldPrice:112.50,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'FR-001',rating:4.5,stock:'ok',badge:'discount'},
-        {id:2,name:'Cadena KMC X12',category:'Cadenas',price:34.50,oldPrice:null,image:'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=500',ref:'CD-002',rating:5.0,stock:'ok',badge:'new'},
-        {id:3,name:'Llanta Michelin 27.5"',category:'Llantas',price:65.99,oldPrice:77.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'LL-003',rating:4.0,stock:'low',badge:'discount'},
-        {id:4,name:'Casco POC Omne',category:'Cascos',price:125.00,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'CS-004',rating:4.8,stock:'ok',badge:'none'},
-        {id:5,name:'Guantes Fox Ranger',category:'Guantes',price:39.99,oldPrice:null,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'GT-005',rating:4.2,stock:'ok',badge:'new'},
-        {id:6,name:'Herramientas Park Tool',category:'Herramientas',price:199.99,oldPrice:229.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'HT-006',rating:5.0,stock:'ok',badge:'discount'},
-        {id:7,name:'Neumático MTB 29"',category:'Llantas',price:49.99,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'NT-007',rating:4.3,stock:'ok',badge:'none'},
-        {id:8,name:'Manubrio Deore XT',category:'Frenos',price:89.99,oldPrice:105.99,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'MB-008',rating:4.6,stock:'ok',badge:'discount'}
-    ];
     // --- Safe global fallbacks for inline onclicks (prevents ReferenceError) ---
     (function(){
         try{
