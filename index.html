@@ -36,8 +36,9 @@
         };
     </script>
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome (solid + regular only) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/solid.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/regular.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
@@ -497,8 +498,12 @@
             <h3 class="font-bold text-xl mb-4 flex items-center gap-2"><i class="fas fa-bicycle text-orange-500"></i> BikeShop</h3>
             <p class="text-gray-300 text-sm">Tu tienda de confianza para repuestos y accesorios.</p>
             <div class="flex gap-3 mt-4">
-                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500"><i class="fab fa-instagram"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500" aria-label="Facebook">
+                    <svg class="w-5 h-5 text-white" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true"><path d="M279.14 288l14.22-92.66h-88.91V127.64c0-25.35 12.42-50.06 52.24-50.06H293V6.26S259.36 0 225.36 0c-73.14 0-121.14 44.38-121.14 124.72v70.62H22.89V288h81.33v224h100.17V288z"></path></svg>
+                </a>
+                <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-orange-500" aria-label="Instagram">
+                    <svg class="w-5 h-5 text-white" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9 114.9-51.3 114.9-114.9-51.3-114.9-114.9-114.9zm0 190.2c-41.5 0-75.3-33.8-75.3-75.3s33.8-75.3 75.3-75.3 75.3 33.8 75.3 75.3-33.8 75.3-75.3 75.3zm146.4-194.3c0 14.9-12.1 27-27 27h-46.1c-14.9 0-27-12.1-27-27v-46.1c0-14.9 12.1-27 27-27h46.1c14.9 0 27 12.1 27 27v46.1zM398.8 80c-26.5-26.5-61.6-41-99.7-41H149c-38.1 0-73.2 14.5-99.7 41S35 115.9 35 154v164c0 38.1 14.5 73.2 41 99.7s61.6 41 99.7 41h150.1c38.1 0 73.2-14.5 99.7-41s41-61.6 41-99.7V154c0-38.1-14.5-73.2-41-99.7zM398.8 318.1c0 23.8-9.3 46.4-26.1 63.2s-39.4 26.1-63.2 26.1H149c-23.8 0-46.4-9.3-63.2-26.1s-26.1-39.4-26.1-63.2V154c0-23.8 9.3-46.4 26.1-63.2S125.2 64.7 149 64.7h160.5c23.8 0 46.4 9.3 63.2 26.1s26.1 39.4 26.1 63.2v164.1z"></path></svg>
+                </a>
             </div>
         </div>
         <div>
@@ -535,7 +540,9 @@
 </footer>
 
 <!-- Botón WhatsApp -->
-<div class="whatsapp-btn" onclick="openWhatsApp()" title="Preguntar / Solicitar por WhatsApp" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></div>
+<div class="whatsapp-btn" onclick="openWhatsApp()" title="Preguntar / Solicitar por WhatsApp" aria-label="WhatsApp">
+    <svg class="w-5 h-5 text-white" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M380.9 97.1C339 55.2 285.7 32 229.4 32 103.4 32 0 135.4 0 261.4c0 46.1 12.1 91.1 35.1 130.9L0 480l89.2-35.1c38.9 21.3 82.8 32.4 127.8 32.4h.1c126 0 229.4-103.4 229.4-229.4 0-56.3-23.2-109.6-65.6-151.8zM229.4 415.7h-.1c-40.6 0-80.1-10.8-114.8-31.2l-8.2-4.9-52.8 20.8 18.2-51.4-5.3-8.5c-21.6-34.8-32.9-75.3-32.9-116.7 0-108.1 88.1-196.2 196.2-196.2 52.4 0 101.6 20.4 138.7 57.4 37 37 57.4 86.2 57.4 138.7 0 108.1-88.1 196.2-196.2 196.2zM311 314.6c-4.3 12.1-24.3 23.3-43.6 15.7-11.8-4.4-20.1-14.4-41.6-28.3-36.4-22.8-59.7-51.1-66.8-61.3-6.6-9.6-.7-14.8 5.1-19.5 5.2-4.4 11.5-11.5 17.3-17.5 5.7-5.8 7.6-9.6 11.4-16 3.8-6.4 1.9-12.1-.9-16.8-2.8-4.7-40.1-97.4-54.9-133.3-14.4-34.3-29.5-29.5-40.1-30.1-10.4-.6-22.4-.8-34.4-.8-11.7 0-16 3.9-21.7 9.5-5.5 5.4-21.1 20.7-21.1 50.4s21.6 58.6 24.7 62.7c3.1 4 42.9 65.5 104 89.2 14.5 5.2 25.7 8.3 34.5 10.6 14.5 3.8 27.7 3.3 38.1 2.1 11.6-1.4 35.4-14.4 40.4-28.3 4.9-13.5 4.9-25.1 3.5-27.5-1.4-2.4-5.1-3.8-10.6-6.5-5.5-2.7-32.7-16.2-37.7-18-5-1.9-8.6-2.8-12.2 2.8-3.6 5.5-14 18-14 43.8s14.3 50.8 16.3 54.3c1.9 3.6 32.2 49.3 78 67.1 10.9 4.7 19.4 7.5 26.1 9.6 10.9 3.5 20.9 3 28.8 1.8 8.8-1.4 27-11 30.9-21.6 3.9-10.7 3.9-19.8 2.7-21.6-1.2-1.7-4.5-2.8-9.4-4.9z"></path></svg>
+</div>
 
 <!-- Modal Pedido -->
 <div id="orderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
@@ -952,7 +959,7 @@
                 ${specs}
                 <div class="mt-3 flex gap-2">
                     <button onclick="openOrderForm('${p.name}',${p.price})" class="flex-1 w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition">Solicitar</button>
-                    <button onclick="sendWhatsAppMessage('${wsMsgEsc}')" title="Pedir por WhatsApp" class="bg-green-500 text-white p-2 rounded-lg btn icon"><i class="fab fa-whatsapp"></i></button>
+                    <button onclick="sendWhatsAppMessage('${wsMsgEsc}')" title="Pedir por WhatsApp" class="bg-green-500 text-white p-2 rounded-lg btn icon"><svg class="w-4 h-4" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M380.9 97.1C339 55.2 285.7 32 229.4 32 103.4 32 0 135.4 0 261.4c0 46.1 12.1 91.1 35.1 130.9L0 480l89.2-35.1c38.9 21.3 82.8 32.4 127.8 32.4h.1c126 0 229.4-103.4 229.4-229.4 0-56.3-23.2-109.6-65.6-151.8zM229.4 415.7h-.1c-40.6 0-80.1-10.8-114.8-31.2l-8.2-4.9-52.8 20.8 18.2-51.4-5.3-8.5c-21.6-34.8-32.9-75.3-32.9-116.7 0-108.1 88.1-196.2 196.2-196.2 52.4 0 101.6 20.4 138.7 57.4 37 37 57.4 86.2 57.4 138.7 0 108.1-88.1 196.2-196.2 196.2zM311 314.6c-4.3 12.1-24.3 23.3-43.6 15.7-11.8-4.4-20.1-14.4-41.6-28.3-36.4-22.8-59.7-51.1-66.8-61.3-6.6-9.6-.7-14.8 5.1-19.5 5.2-4.4 11.5-11.5 17.3-17.5 5.7-5.8 7.6-9.6 11.4-16 3.8-6.4 1.9-12.1-.9-16.8-2.8-4.7-40.1-97.4-54.9-133.3-14.4-34.3-29.5-29.5-40.1-30.1-10.4-.6-22.4-.8-34.4-.8-11.7 0-16 3.9-21.7 9.5-5.5 5.4-21.1 20.7-21.1 50.4s21.6 58.6 24.7 62.7c3.1 4 42.9 65.5 104 89.2 14.5 5.2 25.7 8.3 34.5 10.6 14.5 3.8 27.7 3.3 38.1 2.1 11.6-1.4 35.4-14.4 40.4-28.3 4.9-13.5 4.9-25.1 3.5-27.5-1.4-2.4-5.1-3.8-10.6-6.5-5.5-2.7-32.7-16.2-37.7-18-5-1.9-8.6-2.8-12.2 2.8-3.6 5.5-14 18-14 43.8s14.3 50.8 16.3 54.3c1.9 3.6 32.2 49.3 78 67.1 10.9 4.7 19.4 7.5 26.1 9.6 10.9 3.5 20.9 3 28.8 1.8 8.8-1.4 27-11 30.9-21.6 3.9-10.7 3.9-19.8 2.7-21.6-1.2-1.7-4.5-2.8-9.4-4.9z"></path></svg></button>
                 </div>
             </div>
         </div>`;
@@ -1765,6 +1772,27 @@
         });
     })();
 </script>
-<script src="../bike-fallbacks.js"></script>
+<script>
+    (function(){
+      function openFavFallback(){
+        const fp = document.getElementById('favPanel');
+        const fl = document.getElementById('favList');
+        if(fl && !fl.innerHTML.trim()) fl.innerHTML = '<p class="text-center text-gray-500">No hay favoritos</p>';
+        if(fp) fp.classList.add('active');
+        document.body.style.overflow='hidden';
+      }
+      function openCartFallback(){
+        const cm = document.getElementById('cartModal');
+        const ci = document.getElementById('cartItems');
+        if(ci && !ci.innerHTML.trim()) ci.innerHTML = '<p class="text-center text-gray-500">El carrito está vacío</p>';
+        if(cm) cm.classList.remove('hidden');
+        document.body.style.overflow='hidden';
+      }
+      const fb = document.getElementById('favBtn');
+      const cb = document.getElementById('cartBtn');
+      if(fb) fb.addEventListener('click', (e)=>{ e.preventDefault(); try{ if(typeof openFavorites==='function'){ openFavorites(); } else openFavFallback(); }catch(err){ openFavFallback(); }});
+      if(cb) cb.addEventListener('click', (e)=>{ e.preventDefault(); try{ if(typeof openCart==='function'){ openCart(); } else openCartFallback(); }catch(err){ openCartFallback(); }});
+    })();
+</script>
 </body>
 </html>
