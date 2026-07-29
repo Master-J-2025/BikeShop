@@ -147,6 +147,9 @@
 
         /* Admin panel responsivo */
         .admin-panel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto; backdrop-filter: blur(5px); }
+        .swal2-container { position: fixed !important; z-index: 21000 !important; }
+        .swal2-backdrop { z-index: 20999 !important; }
+        .swal2-popup { z-index: 21001 !important; }
         .admin-panel.active { display: flex; align-items: flex-start; justify-content: center; padding: 1rem; }
         .admin-content { background: white; border-radius: 16px; padding: 1.5rem; max-width: 900px; width: 100%; }
         body.dark .admin-content { background: #2d2d2d; }
@@ -303,6 +306,42 @@
         <button id="tourNextBtn" style="padding:6px 10px;border-radius:8px;background:linear-gradient(90deg,#f97316,#ef4444);color:white;border:none;cursor:pointer">Siguiente</button>
     </div>
     <div id="tourPopoverArrow" style="position:absolute;width:14px;height:14px;transform:rotate(45deg);background:#fff;border-left:1px solid rgba(0,0,0,0.06);border-top:1px solid rgba(0,0,0,0.06);"></div>
+</div>
+
+<!-- Panel Favoritos -->
+<div id="favPanel" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto card-white">
+        <div class="p-4 flex justify-between items-center border-b">
+            <div>
+                <h2 class="text-xl font-bold">Favoritos</h2>
+                <p class="text-sm text-gray-500">Tus productos guardados.</p>
+            </div>
+            <button onclick="closeFavorites()" class="text-2xl text-gray-700 hover:text-gray-900">×</button>
+        </div>
+        <div id="favList" class="p-4 grid gap-3"></div>
+    </div>
+</div>
+
+<!-- Panel Carrito -->
+<div id="cartModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto card-white">
+        <div class="p-4 flex justify-between items-center border-b">
+            <div>
+                <h2 class="text-xl font-bold">Carrito</h2>
+                <p class="text-sm text-gray-500">Revisa tus productos y envía la solicitud.</p>
+            </div>
+            <button onclick="closeCart()" class="text-2xl text-gray-700 hover:text-gray-900">×</button>
+        </div>
+        <div id="cartItems" class="p-4 space-y-3"></div>
+        <div class="p-4 border-t flex justify-between items-center">
+            <span class="font-medium">Total:</span>
+            <strong id="cartTotal" class="text-lg">$0.00</strong>
+        </div>
+        <div class="p-4 flex flex-col gap-3 sm:flex-row">
+            <button onclick="submitCartRequest()" class="flex-1 bg-orange-500 text-white rounded-lg py-3 font-semibold">Enviar solicitud</button>
+            <button onclick="closeCart()" class="flex-1 border border-gray-300 rounded-lg py-3 font-semibold">Cerrar</button>
+        </div>
+    </div>
 </div>
 
 <!-- CONTENIDO PRINCIPAL -->
@@ -541,7 +580,7 @@
         <form id="adminProductForm" onsubmit="saveProductFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6">
             <input type="hidden" id="editProductId">
             <input type="text" id="adminName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2">
-            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Luces</option><option>Herramientas</option></select>
+            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option></select>
             <input type="number" step="0.01" id="adminPrice" placeholder="Precio *" required class="w-full border rounded-lg px-3 py-2">
             <input type="number" step="0.01" id="adminOldPrice" placeholder="Precio anterior" class="w-full border rounded-lg px-3 py-2">
             <div class="col-span-2">
@@ -584,11 +623,22 @@
 </div>
 
 <script>
+    // Productos iniciales
+    const defaultProducts = [
+        {id:1,name:'Frenos Shimano',category:'Frenos',price:89.99,oldPrice:112.50,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'FR-001',rating:4.5,stock:'ok',badge:'discount'},
+        {id:2,name:'Cadena KMC X12',category:'Cadenas',price:34.50,oldPrice:null,image:'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=500',ref:'CD-002',rating:5.0,stock:'ok',badge:'new'},
+        {id:3,name:'Llanta Michelin 27.5"',category:'Llantas',price:65.99,oldPrice:77.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'LL-003',rating:4.0,stock:'low',badge:'discount'},
+        {id:4,name:'Casco POC Omne',category:'Cascos',price:125.00,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'CS-004',rating:4.8,stock:'ok',badge:'none'},
+        {id:5,name:'Guantes Fox Ranger',category:'Guantes',price:39.99,oldPrice:null,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'GT-005',rating:4.2,stock:'ok',badge:'new'},
+        {id:6,name:'Herramientas Park Tool',category:'Herramientas',price:199.99,oldPrice:229.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'HT-006',rating:5.0,stock:'ok',badge:'discount'},
+        {id:7,name:'Neumático MTB 29"',category:'Llantas',price:49.99,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'NT-007',rating:4.3,stock:'ok',badge:'none'},
+        {id:8,name:'Manubrio Deore XT',category:'Frenos',price:89.99,oldPrice:105.99,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'MB-008',rating:4.6,stock:'ok',badge:'discount'}
+    ];
     // --- Safe global fallbacks for inline onclicks (prevents ReferenceError) ---
     (function(){
         try{
-            window.closeFavorites = window.closeFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) fp.classList.remove('active'); document.body.style.overflow=''; };
-            window.openFavorites = window.openFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) fp.classList.add('active'); document.body.style.overflow='hidden'; };
+            window.closeFavorites = window.closeFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) { fp.classList.remove('active'); fp.classList.add('hidden'); } document.body.style.overflow=''; };
+            window.openFavorites = window.openFavorites || function(){ const fp = document.getElementById('favPanel'); if(fp) { fp.classList.remove('hidden'); fp.classList.add('active'); } document.body.style.overflow='hidden'; };
             window.closeCart = window.closeCart || function(){ const cm = document.getElementById('cartModal'); if(cm) cm.classList.add('hidden'); document.body.style.overflow=''; };
             window.openCart = window.openCart || function(){ const cm = document.getElementById('cartModal'); if(cm) cm.classList.remove('hidden'); document.body.style.overflow='hidden'; };
             window.closeOrderForm = window.closeOrderForm || function(){ const om = document.getElementById('orderModal'); if(om) om.classList.add('hidden'); document.body.style.overflow=''; };
@@ -655,6 +705,7 @@
     // Favorites and Cart state (persisted in localStorage)
     let favorites = new Set(JSON.parse(localStorage.getItem('bikeshop_favs') || '[]'));
     let cart = JSON.parse(localStorage.getItem('bikeshop_cart') || '[]'); // [{id, qty}]
+    let tourSteps = [];
 
     function saveFavs(){
         localStorage.setItem('bikeshop_favs', JSON.stringify(Array.from(favorites)));
@@ -691,11 +742,11 @@
 
     function removeFromCart(id){ cart = cart.filter(c=>c.id!==Number(id)); saveCart(); renderCartModal(); }
 
-    function openFavorites(){ renderFavoritesPanel(); document.getElementById('favPanel').classList.add('active'); document.body.style.overflow='hidden'; }
-    function closeFavorites(){ document.getElementById('favPanel').classList.remove('active'); document.body.style.overflow=''; }
+    function openFavorites(){ renderFavoritesPanel(); const panel = document.getElementById('favPanel'); if(panel){ panel.classList.remove('hidden'); panel.classList.add('active'); } document.body.style.overflow='hidden'; }
+    function closeFavorites(){ const panel = document.getElementById('favPanel'); if(panel){ panel.classList.remove('active'); panel.classList.add('hidden'); } document.body.style.overflow=''; }
 
-    function openCart(){ renderCartModal(); document.getElementById('cartModal').classList.remove('hidden'); document.body.style.overflow='hidden'; }
-    function closeCart(){ document.getElementById('cartModal').classList.add('hidden'); document.body.style.overflow=''; }
+    function openCart(){ renderCartModal(); const cartModal = document.getElementById('cartModal'); if(cartModal){ cartModal.classList.remove('hidden'); } document.body.style.overflow='hidden'; }
+    function closeCart(){ const cartModal = document.getElementById('cartModal'); if(cartModal){ cartModal.classList.add('hidden'); } document.body.style.overflow=''; }
 
     function renderFavoritesPanel(){
         const el = document.getElementById('favList');
@@ -1415,7 +1466,7 @@
         }
     });
 
-    const tourSteps = [
+    tourSteps = [
         { title: 'Inicio', text: 'Este es el inicio: aquí encuentras el hero, búsquedas rápidas y accesos directos al catálogo.', selector: 'a[data-section="inicio"]' },
         { title: 'Buscar', text: 'Usa la barra de búsqueda para encontrar productos rápidamente.', selector: '#searchInput' },
         { title: 'Catálogo', text: 'Explora el catálogo con filtros y agrega al carrito o favoritos.', selector: 'a[data-section="catalogo"]' },
@@ -1429,6 +1480,10 @@
     var tourActive = false;
 
     function startTour(startIndex = 0) {
+        if (!Array.isArray(tourSteps) || tourSteps.length === 0) {
+            console.warn('Tour no iniciado: tourSteps no está definido o está vacío.');
+            return;
+        }
         tourIndex = Math.max(0, Math.min(tourSteps.length - 1, startIndex));
         tourActive = true;
         localStorage.setItem('bikeshop_onboarding_seen', 'false');
