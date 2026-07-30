@@ -635,17 +635,8 @@
 </div>
 
 <script>
-    // Productos iniciales
-    const defaultProducts = [
-        {id:1,name:'Frenos Shimano',category:'Frenos',price:89.99,oldPrice:112.50,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'FR-001',rating:4.5,stock:'ok',badge:'discount'},
-        {id:2,name:'Cadena KMC X12',category:'Cadenas',price:34.50,oldPrice:null,image:'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=500',ref:'CD-002',rating:5.0,stock:'ok',badge:'new'},
-        {id:3,name:'Llanta Michelin 27.5"',category:'Llantas',price:65.99,oldPrice:77.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'LL-003',rating:4.0,stock:'low',badge:'discount'},
-        {id:4,name:'Casco POC Omne',category:'Cascos',price:125.00,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'CS-004',rating:4.8,stock:'ok',badge:'none'},
-        {id:5,name:'Guantes Fox Ranger',category:'Guantes',price:39.99,oldPrice:null,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'GT-005',rating:4.2,stock:'ok',badge:'new'},
-        {id:6,name:'Herramientas Park Tool',category:'Herramientas',price:199.99,oldPrice:229.99,image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500',ref:'HT-006',rating:5.0,stock:'ok',badge:'discount'},
-        {id:7,name:'Neumático MTB 29"',category:'Llantas',price:49.99,oldPrice:null,image:'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=500',ref:'NT-007',rating:4.3,stock:'ok',badge:'none'},
-        {id:8,name:'Manubrio Deore XT',category:'Frenos',price:89.99,oldPrice:105.99,image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',ref:'MB-008',rating:4.6,stock:'ok',badge:'discount'}
-    ];
+    // Catálogo inicial vacío: se muestran solo productos reales cargados desde localStorage o Supabase.
+    let products = [];
     // --- Safe global fallbacks for inline onclicks (prevents ReferenceError) ---
     (function(){
         try{
@@ -666,14 +657,25 @@
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
-    // Admin WhatsApp number (use international format without +)
-    const ADMIN_WHATSAPP = '18292612750';
+    const WHATSAPP_CONTACTS = [
+        { name: 'Janiel Aquino', phone: '18292612750', label: '+1 (829) 261-2750' },
+        { name: 'Jose Miguel', phone: '18292612879', label: '+1 (829) 261-2879' }
+    ];
+
     function sendWhatsAppMessage(text){
-        try { window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + encodeURIComponent(text), '_blank'); }
-        catch(e){ console.warn('No se pudo abrir WhatsApp', e); }
+        openWhatsApp(text);
     }
 
-    let products = [...defaultProducts];
+    async function syncLocalRequestsToRemote() {
+        if (!supabaseClient) return;
+        const localRequests = getStoredRequests();
+        if (!localRequests.length) return;
+        try {
+            await supabaseClient.from('requests').upsert(localRequests.map(serializeRequestForRemote), { onConflict: 'id' });
+        } catch (err) {
+            console.warn('No se pudo sincronizar solicitudes locales con Supabase', err);
+        }
+    }
 
     function readFileAsDataUrl(file) {
         return new Promise((resolve, reject) => {
@@ -718,6 +720,7 @@
     let favorites = new Set(JSON.parse(localStorage.getItem('bikeshop_favs') || '[]'));
     let cart = JSON.parse(localStorage.getItem('bikeshop_cart') || '[]'); // [{id, qty}]
     let tourSteps = [];
+    let cachedRequests = [];
 
     function saveFavs(){
         localStorage.setItem('bikeshop_favs', JSON.stringify(Array.from(favorites)));
@@ -845,7 +848,11 @@
             try {
                 await supabaseClient.from('requests').upsert(normalized.map(serializeRequestForRemote), { onConflict: 'id' });
             } catch (err) {
-                console.warn('No se pudo sincronizar las solicitudes con Supabase', err);
+                if (err?.code === 'PGRST205' && err?.message?.includes('requests')) {
+                    console.warn('No se encontró la tabla "requests" en Supabase. Ejecuta el SQL de esquema para crearla.', err);
+                } else {
+                    console.warn('No se pudo sincronizar las solicitudes con Supabase', err);
+                }
             }
         }
         return normalized;
@@ -853,23 +860,43 @@
 
     async function persistRequest(request){
         const requests = [...getStoredRequests(), normalizeRequestForStorage(request)];
-        return persistRequests(requests);
+        const persisted = await persistRequests(requests);
+        await syncLocalRequestsToRemote();
+        return persisted;
     }
 
     async function loadRequestsFromRemote(){
-        if (!supabaseClient) return getStoredRequests();
+        const localRequests = getStoredRequests();
+        if (!supabaseClient) return localRequests;
         try {
             const { data, error } = await supabaseClient.from('requests').select('*').order('id', { ascending: true });
-            if (!error && Array.isArray(data) && data.length) {
-                return persistRequests(data.map((item)=>normalizeRequestForStorage({
+            if (!error && Array.isArray(data)) {
+                const remoteRequests = data.map((item) => normalizeRequestForStorage({
                     ...item,
                     items: typeof item.items === 'string' ? JSON.parse(item.items || '[]') : item.items
-                })));
+                }));
+                const mergedRequests = [
+                    ...remoteRequests.map((remote) => {
+                        const local = localRequests.find((item) => item.id === remote.id);
+                        return local ? { ...remote, ...local } : remote;
+                    }),
+                    ...localRequests.filter((local) => !remoteRequests.some((remote) => remote.id === local.id))
+                ];
+                await persistRequests(mergedRequests);
+                await syncLocalRequestsToRemote();
+                return mergedRequests;
+            }
+            if (error) {
+                if (error?.code === 'PGRST205' && error?.message?.includes('requests')) {
+                    console.warn('No se encontró la tabla "requests" en Supabase. Ejecuta el SQL de esquema para crearla.', error);
+                } else {
+                    console.warn('No se pudo cargar solicitudes desde Supabase', error);
+                }
             }
         } catch (err) {
             console.warn('No se pudo cargar solicitudes desde Supabase', err);
         }
-        return getStoredRequests();
+        return localRequests;
     }
 
     function submitCartRequest(){
@@ -1022,11 +1049,11 @@
 
     function renderFeatured() {
         const featured = products.slice(-4).reverse();
-        document.getElementById('featured-products-container').innerHTML = featured.map(createCard).join('');
+        document.getElementById('featured-products-container').innerHTML = featured.length ? featured.map(createCard).join('') : '<p class="col-span-full text-center text-gray-500">No hay productos destacados aún.</p>';
     }
     function renderCatalog(cat='Todas') {
         const filtered = cat==='Todas'?products:products.filter(p=>p.category===cat);
-        document.getElementById('catalog-products-container').innerHTML = filtered.map(createCard).join('');
+        document.getElementById('catalog-products-container').innerHTML = filtered.length ? filtered.map(createCard).join('') : '<p class="col-span-full text-center text-gray-500">No hay productos disponibles en esta categoría.</p>';
     }
     function renderOffers() {
         const offers = products.filter(p=>p.oldPrice&&p.oldPrice>p.price);
@@ -1131,11 +1158,6 @@
         e.target.reset();
     }
 
-    const WHATSAPP_CONTACTS = [
-        { name: 'Janiel Aquino', phone: '18292612750', label: '+1 (829) 261-2750' },
-        { name: 'Jose Miguel', phone: '18292612879', label: '+1 (829) 261-2879' }
-    ];
-
     function openWhatsApp(message){
         const text = message && message.length ? message : 'Hola, tengo una consulta sobre sus productos. ¿Me pueden ayudar?';
         try{
@@ -1168,7 +1190,17 @@
                 }
             });
         }catch(e){
-            window.open('https://wa.me/8292612750','_blank');
+            console.warn('openWhatsApp fallback', e);
+            if (WHATSAPP_CONTACTS.length > 1) {
+                const first = WHATSAPP_CONTACTS[0];
+                const second = WHATSAPP_CONTACTS[1];
+                const chooseFirst = window.confirm(`No se pudo abrir la pantalla de selección. ¿Enviar a ${first.name}? Cancelar enviará a ${second.name}.`);
+                const phone = chooseFirst ? first.phone : second.phone;
+                window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
+            } else {
+                const fallbackPhone = WHATSAPP_CONTACTS[0]?.phone || '18292612750';
+                window.open('https://wa.me/' + fallbackPhone + '?text=' + encodeURIComponent(text), '_blank');
+            }
         }
     }
 
@@ -1243,10 +1275,11 @@
     function openAdminPrompt() {
         Swal.fire({title:'Admin',input:'password',inputLabel:'Contraseña',inputPlaceholder:'admin123',showCancelButton:true}).then(r=>{if(r.isConfirmed&&r.value==='admin123') openAdminPanel();});
     }
-    function openAdminPanel() {
+    async function openAdminPanel() {
         const panel = document.getElementById('adminPanel');
         if (panel) panel.classList.add('active');
         document.body.style.overflow='hidden';
+        await loadRequestsFromRemote().catch((err) => console.warn('No se pudo cargar solicitudes al abrir admin', err));
         renderAdminList();
         initProductSelectOptions();
         initBlogEditor();
@@ -1254,14 +1287,20 @@
     }
     function closeAdminPanel() { document.getElementById('adminPanel').classList.remove('active'); document.body.style.overflow=''; }
     function renderAdminList() {
-        document.getElementById('adminProductList').innerHTML = products.map(p=>`
-            <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <span><strong>${p.name}</strong> - $${p.price}</span>
-                <div class="flex gap-2">
-                    <button onclick="editProduct(${p.id})" class="text-blue-500"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteProduct(${p.id})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>`).join('');
+        const adminProductList = document.getElementById('adminProductList');
+        if (!adminProductList) return;
+        if (products.length === 0) {
+            adminProductList.innerHTML = '<p class="text-gray-500">No hay productos cargados. Agrega productos reales desde el panel administrativo.</p>';
+        } else {
+            adminProductList.innerHTML = products.map(p=>`
+                <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                    <span><strong>${p.name}</strong> - $${p.price}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editProduct(${p.id})" class="text-blue-500"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteProduct(${p.id})" class="text-red-500"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`).join('');
+        }
         renderAdminBlogList();
     }
 
@@ -1350,8 +1389,14 @@
         renderAdminBlogList(); renderBlog();
     }
 
+    function findRequestById(requestOrId) {
+        if (typeof requestOrId === 'object') return requestOrId;
+        const id = Number(requestOrId);
+        return cachedRequests.find((item)=>item.id===id) || getStoredRequests().find((item) => item.id === id);
+    }
+
     async function copyRequest(requestOrId){
-        const request = typeof requestOrId === 'object' ? requestOrId : getStoredRequests().find((item) => item.id === Number(requestOrId));
+        const request = findRequestById(requestOrId);
         if (!request) return;
         const text = JSON.stringify(request, null, 2);
         try {
@@ -1368,21 +1413,31 @@
     }
 
     function sendRequestWhatsApp(requestOrId){
-        const request = typeof requestOrId === 'object' ? requestOrId : getStoredRequests().find((item) => item.id === Number(requestOrId));
-        if (!request) return;
-        const msg = `Solicitud ${request.id}\n${request.product || 'pedido'}\nCliente: ${request.name || ''} ${request.lastName || ''}\nWhatsApp: ${request.whatsapp || ''}\nMunicipio: ${request.municipality || ''}\nParajes: ${request.parish || ''}`;
-        sendWhatsAppMessage(msg);
+        const request = findRequestById(requestOrId);
+        if (!request || !request.whatsapp) {
+            Swal.fire({icon:'warning',title:'WhatsApp no disponible',text:'La solicitud no tiene número de WhatsApp válido.',confirmButtonColor:'#e74c3c'});
+            return;
+        }
+        const phoneNumber = String(request.whatsapp).replace(/\D/g, '');
+        if (!phoneNumber) {
+            Swal.fire({icon:'warning',title:'WhatsApp no válido',text:'El número de la solicitud no es válido.',confirmButtonColor:'#e74c3c'});
+            return;
+        }
+        const msg = `Hola ${request.name || ''} ${request.lastName || ''},\nTu solicitud #${request.id} está en revisión.\nProducto: ${request.product || request.items?.map((it)=>`${it.qty}x ${it.name}`).join(', ') || 'pedido'}\nTotal: $${Number(request.total || 0).toFixed(2)}\nMunicipio: ${request.municipality || ''}\nParajes: ${request.parish || ''}`;
+        window.open('https://wa.me/' + phoneNumber + '?text=' + encodeURIComponent(msg), '_blank');
         Swal.fire({icon:'success',title:'Enviado a WhatsApp',timer:900,showConfirmButton:false,toast:true,position:'top-right'});
     }
 
     async function markRequestAsAttended(requestId){
         const requests = getStoredRequests().map((request) => request.id === Number(requestId) ? { ...request, status: 'atendida' } : request);
         await persistRequests(requests);
+        cachedRequests = requests;
         await renderAdminRequests();
     }
 
     async function renderAdminRequests(){
         const requests = (await loadRequestsFromRemote()).reverse();
+        cachedRequests = requests;
         const container = document.getElementById('adminRequestList');
         if(!container) return;
         if(requests.length===0){ container.innerHTML = '<p class="text-gray-500">No hay solicitudes.</p>'; return; }
