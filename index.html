@@ -861,7 +861,7 @@
     async function persistRequest(request){
         const requests = [...getStoredRequests(), normalizeRequestForStorage(request)];
         const persisted = await persistRequests(requests);
-        await syncLocalRequestsToRemote();
+        await loadRequestsFromRemote();
         return persisted;
     }
 
@@ -1473,13 +1473,38 @@
         await renderAdminRequests();
     }
 
+    async function clearLocalRequests(){
+        localStorage.removeItem('bikeshop_requests');
+        cachedRequests = [];
+        await renderAdminRequests();
+        Swal.fire({icon:'success',title:'Caché local eliminada',timer:900,showConfirmButton:false,toast:true,position:'top-right'});
+    }
+
     async function renderAdminRequests(){
         const requests = (await loadRequestsFromRemote()).reverse();
         cachedRequests = requests;
         const container = document.getElementById('adminRequestList');
         if(!container) return;
-        if(requests.length===0){ container.innerHTML = '<p class="text-gray-500">No hay solicitudes.</p>'; return; }
-        container.innerHTML = requests.map((r)=>{
+        if(requests.length===0){
+            container.innerHTML = `<div class="flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-600">Solicitudes remotas: 0</div>
+                    <div class="flex gap-2">
+                        <button onclick="renderAdminRequests()" class="px-3 py-1 bg-orange-500 text-white rounded">Actualizar</button>
+                        <button onclick="clearLocalRequests()" class="px-3 py-1 border rounded">Limpiar caché local</button>
+                    </div>
+                </div>
+                <p class="text-gray-500">No hay solicitudes.</p>
+            </div>`;
+            return;
+        }
+        container.innerHTML = `<div class="flex justify-between items-center mb-3">
+                <div class="text-sm text-gray-600">Solicitudes remotas: ${requests.length}</div>
+                <div class="flex gap-2">
+                    <button onclick="renderAdminRequests()" class="px-3 py-1 bg-orange-500 text-white rounded">Actualizar</button>
+                    <button onclick="clearLocalRequests()" class="px-3 py-1 border rounded">Limpiar caché local</button>
+                </div>
+            </div>` + requests.map((r)=>{
             const itemsHtml = r.items ? r.items.map((it)=>`<div class="text-sm">${it.qty}x ${it.name}${it.price != null ? ` - $${Number(it.price).toFixed(2)}` : ''}</div>`).join('') : '';
             const locationText = [r.municipality, r.parish].filter(Boolean).join(' · ');
             return `
