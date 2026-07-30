@@ -10,8 +10,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com">
     </script>
-    <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -425,7 +425,7 @@
             <div class="flex justify-end mb-4">
                 <select id="categoryFilterSelect" onchange="filterCatalog()" class="border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500">
                     <option value="Todas">Todas</option>
-                    <option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Body</option><option>Luces</option><option>Herramientas</option>
+                    <option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option>
                 </select>
             </div>
             <div id="catalog-products-container" class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4"></div>
@@ -551,18 +551,22 @@
             <button onclick="closeOrderForm()" class="text-2xl text-white"><i class="fas fa-times"></i></button>
         </div>
         <form onsubmit="submitOrder(event)" class="p-4 space-y-3">
+            <input type="hidden" id="requestSource" value="product">
+            <input type="hidden" id="requestItemsJson" value="">
+            <input type="hidden" id="requestTotal" value="0">
+            <div id="requestSummary" class="hidden rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-gray-700"></div>
             <div class="grid grid-cols-2 gap-3">
                 <input type="text" id="orderName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2.5">
                 <input type="text" id="orderLastName" placeholder="Apellido *" required class="w-full border rounded-lg px-3 py-2.5">
                 <input type="tel" id="orderWhatsApp" placeholder="WhatsApp *" required class="w-full border rounded-lg px-3 py-2.5">
                 <input type="email" id="orderEmail" placeholder="Correo *" required class="w-full border rounded-lg px-3 py-2.5">
                 <input type="number" id="orderQuantity" value="1" min="1" required class="w-full border rounded-lg px-3 py-2.5" placeholder="Cantidad">
-                <select id="orderProvince" required class="w-full border rounded-lg px-3 py-2.5"><option>Provincia...</option><option>Santo Domingo</option><option>Santiago</option></select>
-                <input type="text" id="orderCity" placeholder="Municipio *" required class="w-full border rounded-lg px-3 py-2.5">
-                <input type="text" id="orderAddress" placeholder="Dirección *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="text" id="orderMunicipio" placeholder="Municipio *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="text" id="orderParaje" placeholder="Parajes *" required class="w-full border rounded-lg px-3 py-2.5">
+                <input type="text" id="orderAddress" placeholder="Dirección / referencia *" required class="w-full border rounded-lg px-3 py-2.5 col-span-2">
             </div>
             <div><label class="font-semibold text-sm">Entrega:</label><div class="flex gap-4"><label><input type="radio" name="delivery" value="tienda" checked> Tienda</label><label><input type="radio" name="delivery" value="domicilio"> Domicilio</label></div></div>
-            <textarea placeholder="Comentario..." class="w-full border rounded-lg px-3 py-2.5" rows="2"></textarea>
+            <textarea id="orderComment" placeholder="Comentario..." class="w-full border rounded-lg px-3 py-2.5" rows="2"></textarea>
             <div class="flex gap-3 justify-end">
                 <button type="button" onclick="closeOrderForm()" class="px-5 py-2.5 border rounded-lg">Cancelar</button>
                 <button type="submit" class="gradient-btn text-white px-6 py-2.5 rounded-lg font-bold">Enviar solicitud</button>
@@ -586,7 +590,7 @@
         <form id="adminProductForm" onsubmit="saveProductFromAdmin(event)" class="grid grid-cols-2 gap-3 mb-6">
             <input type="hidden" id="editProductId">
             <input type="text" id="adminName" placeholder="Nombre *" required class="w-full border rounded-lg px-3 py-2">
-            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Body</option><option>Luces</option><option>Herramientas</option></select>
+            <select id="adminCategory" required class="w-full border rounded-lg px-3 py-2"><option>Frenos</option><option>Cadenas</option><option>Llantas</option><option>Cascos</option><option>Guantes</option><option>Herramientas</option></select>
             <input type="number" step="0.01" id="adminPrice" placeholder="Precio *" required class="w-full border rounded-lg px-3 py-2">
             <input type="number" step="0.01" id="adminOldPrice" placeholder="Precio anterior" class="w-full border rounded-lg px-3 py-2">
             <textarea id="adminDescription" rows="2" placeholder="Descripción breve" class="col-span-2 w-full border rounded-lg px-3 py-2"></textarea>
@@ -660,7 +664,6 @@
     if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('tu-proyecto')) {
         // use a different local variable name to avoid redeclaring the global `supabase`
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        window.supabaseClient = supabaseClient;
     }
 
     // Admin WhatsApp number (use international format without +)
@@ -794,7 +797,82 @@
         }).join('');
         document.getElementById('cartTotal').textContent = '$'+total.toFixed(2);
     }
-    async function submitCartRequest(){
+    function getStoredRequests(){
+        try {
+            const parsed = JSON.parse(localStorage.getItem('bikeshop_requests') || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.warn('No se pudieron leer las solicitudes locales', e);
+            return [];
+        }
+    }
+
+    function saveStoredRequests(requests){
+        const normalized = Array.isArray(requests) ? requests : [];
+        localStorage.setItem('bikeshop_requests', JSON.stringify(normalized));
+        return normalized;
+    }
+
+    function normalizeRequestForStorage(request){
+        const normalized = {
+            ...request,
+            id: request.id || Date.now(),
+            status: request.status || 'pendiente',
+            date: request.date || new Date().toLocaleString('es-ES')
+        };
+        if (!Array.isArray(normalized.items)) {
+            try {
+                normalized.items = typeof normalized.items === 'string' ? JSON.parse(normalized.items || '[]') : [];
+            } catch (error) {
+                normalized.items = [];
+            }
+        }
+        return normalized;
+    }
+
+    function serializeRequestForRemote(request){
+        const normalized = normalizeRequestForStorage(request);
+        return {
+            ...normalized,
+            items: typeof normalized.items === 'string' ? normalized.items : JSON.stringify(normalized.items || []),
+            related_products: normalized.related_products || JSON.stringify(normalized.items || [])
+        };
+    }
+
+    async function persistRequests(requests){
+        const normalized = saveStoredRequests((Array.isArray(requests) ? requests : []).map(normalizeRequestForStorage));
+        if (supabaseClient) {
+            try {
+                await supabaseClient.from('requests').upsert(normalized.map(serializeRequestForRemote), { onConflict: 'id' });
+            } catch (err) {
+                console.warn('No se pudo sincronizar las solicitudes con Supabase', err);
+            }
+        }
+        return normalized;
+    }
+
+    async function persistRequest(request){
+        const requests = [...getStoredRequests(), normalizeRequestForStorage(request)];
+        return persistRequests(requests);
+    }
+
+    async function loadRequestsFromRemote(){
+        if (!supabaseClient) return getStoredRequests();
+        try {
+            const { data, error } = await supabaseClient.from('requests').select('*').order('id', { ascending: true });
+            if (!error && Array.isArray(data) && data.length) {
+                return persistRequests(data.map((item)=>normalizeRequestForStorage({
+                    ...item,
+                    items: typeof item.items === 'string' ? JSON.parse(item.items || '[]') : item.items
+                })));
+            }
+        } catch (err) {
+            console.warn('No se pudo cargar solicitudes desde Supabase', err);
+        }
+        return getStoredRequests();
+    }
+
+    function submitCartRequest(){
         if(cart.length===0) {
             Swal.fire({icon:'info',title:'Carrito vacío',text:'Agrega productos para enviar una solicitud.',confirmButtonColor:'#e74c3c'});
             return;
@@ -804,33 +882,8 @@
             return p ? { id:p.id, name:p.name, qty:ci.qty, price:p.price } : null;
         }).filter(Boolean);
         const total = items.reduce((sum,item)=>sum+item.price*item.qty,0);
-        const request = {
-            id: Date.now(),
-            items,
-            total,
-            date: new Date().toLocaleString('es-ES'),
-            status: 'pendiente'
-        };
-        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]');
-        requests.push(request);
-        localStorage.setItem('bikeshop_requests', JSON.stringify(requests));
-        if (supabaseClient) {
-            try {
-                await supabaseClient.from('requests').insert([{ ...request, items: JSON.stringify(items) }]);
-            } catch (err) {
-                console.warn('No se pudo guardar la solicitud en Supabase', err);
-            }
-        }
-        // Enviar WhatsApp al admin con el resumen
-        try{
-            const msg = `Nueva solicitud: ${request.id}\nTotal: $${total.toFixed(2)}\nItems:\n${items.map(it=>`${it.qty}x ${it.name}`).join('\n')}`;
-            sendWhatsAppMessage(msg);
-        }catch(e){console.warn(e)}
-        cart = [];
-        saveCart();
-        renderCartModal();
         closeCart();
-        Swal.fire({icon:'success',title:'Solicitud enviada',text:'El administrador recibirá tu solicitud de pedido.',confirmButtonColor:'#e74c3c'});
+        openOrderForm('Solicitud de carrito', total, { source: 'cart', items, total, title: 'Solicitud de carrito' });
     }
 
     async function loadProducts() {
@@ -856,10 +909,6 @@
         renderAll();
     }
 
-    function getNextProductId() {
-        return products.reduce((max, p) => Math.max(max, Number(p.id) || 0), 0) + 1;
-    }
-
     function buildSupabaseProduct(product) {
         return {
             id: product.id,
@@ -873,30 +922,6 @@
             stock: product.stock,
             badge: product.badge
         };
-    }
-
-    function showSyncStatus(synced) {
-        if (synced) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Sincronizado con Supabase',
-                text: 'El producto se guardó y está disponible en la tabla remota.',
-                timer: 1800,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-right'
-            });
-        } else {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Guardado local',
-                text: 'El producto se guardó en este dispositivo, pero no se sincronizó con Supabase.',
-                timer: 2400,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-right'
-            });
-        }
     }
 
     async function save() {
@@ -986,7 +1011,7 @@
                 ${description}
                 ${specs}
                 <div class="mt-3 flex gap-2">
-                    <button onclick="openOrderForm('${p.name}',${p.price})" class="flex-1 w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition">Solicitar</button>
+                    <button onclick="openOrderForm('${p.name}',${p.price},{source:'product',total:${p.price},title:'Solicitud de ${p.name} - $${p.price}'})" class="flex-1 w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition">Solicitar</button>
                     <button onclick="sendWhatsAppMessage('${wsMsgEsc}')" title="Pedir por WhatsApp" class="w-10 h-10 flex items-center justify-center bg-green-500 text-white rounded-lg shadow-sm hover:bg-green-600 transition">
                         <i class="fab fa-whatsapp text-base"></i>
                     </button>
@@ -1032,8 +1057,26 @@
     }
 
     // Modal pedido
-    function openOrderForm(name,price) {
-        document.getElementById('modalProductName').textContent = `Solicitud de ${name} - $${price}`;
+    function openOrderForm(name, price, options = {}) {
+        const modalName = document.getElementById('modalProductName');
+        const requestSource = document.getElementById('requestSource');
+        const requestItemsInput = document.getElementById('requestItemsJson');
+        const requestTotalInput = document.getElementById('requestTotal');
+        const requestSummary = document.getElementById('requestSummary');
+        const title = options.title || `Solicitud de ${name} - $${price}`;
+        if (modalName) modalName.textContent = title;
+        if (requestSource) requestSource.value = options.source || 'product';
+        if (requestItemsInput) requestItemsInput.value = options.items ? JSON.stringify(options.items) : '';
+        if (requestTotalInput) requestTotalInput.value = options.total != null ? String(options.total) : '0';
+        if (requestSummary) {
+            if (options.items && options.items.length) {
+                requestSummary.innerHTML = `<div class="font-semibold mb-1">Resumen del carrito</div><div>${options.items.map((item) => `${item.qty}x ${item.name}`).join('<br>')}</div>`;
+                requestSummary.classList.remove('hidden');
+            } else {
+                requestSummary.innerHTML = '';
+                requestSummary.classList.add('hidden');
+            }
+        }
         document.getElementById('orderModal').classList.remove('hidden');
         document.body.style.overflow='hidden';
     }
@@ -1043,38 +1086,48 @@
     }
     async function submitOrder(e) {
         e.preventDefault();
+        const requestSource = document.getElementById('requestSource').value || 'product';
+        const requestItemsJson = document.getElementById('requestItemsJson').value;
+        let items = [];
+        if (requestSource === 'cart' && requestItemsJson) {
+            try { items = JSON.parse(requestItemsJson); } catch (error) { console.warn('No se pudo leer el resumen del carrito', error); }
+        } else {
+            const quantity = Number(document.getElementById('orderQuantity').value || 1);
+            const productName = document.getElementById('modalProductName').textContent;
+            items = [{ name: productName, qty: quantity, price: Number(document.getElementById('requestTotal').value || 0) }];
+        }
+
         const values = {
             id: Date.now(),
+            source: requestSource,
             product: document.getElementById('modalProductName').textContent,
-            name: document.getElementById('orderName').value,
-            lastName: document.getElementById('orderLastName').value,
-            whatsapp: document.getElementById('orderWhatsApp').value,
-            email: document.getElementById('orderEmail').value,
-            quantity: Number(document.getElementById('orderQuantity').value),
-            province: document.getElementById('orderProvince').value,
-            city: document.getElementById('orderCity').value,
-            address: document.getElementById('orderAddress').value,
-            comment: document.querySelector('#orderModal textarea').value,
+            items,
+            total: Number(document.getElementById('requestTotal').value || 0),
+            name: document.getElementById('orderName').value.trim(),
+            lastName: document.getElementById('orderLastName').value.trim(),
+            whatsapp: document.getElementById('orderWhatsApp').value.trim(),
+            email: document.getElementById('orderEmail').value.trim(),
+            quantity: Number(document.getElementById('orderQuantity').value || 1),
+            municipality: document.getElementById('orderMunicipio').value.trim(),
+            parish: document.getElementById('orderParaje').value.trim(),
+            address: document.getElementById('orderAddress').value.trim(),
+            delivery: document.querySelector('input[name="delivery"]:checked')?.value || 'tienda',
+            comment: document.getElementById('orderComment').value.trim(),
             date: new Date().toLocaleString('es-ES'),
             status: 'pendiente'
         };
-        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]');
-        requests.push(values);
-        localStorage.setItem('bikeshop_requests', JSON.stringify(requests));
-        if (supabaseClient) {
-            try {
-                await supabaseClient.from('requests').insert([{ ...values, related_products: JSON.stringify([]) }]);
-            } catch (err) {
-                console.warn('No se pudo guardar la solicitud en Supabase', err);
-            }
-        }
-        // Enviar notificación por WhatsApp al admin
+        await persistRequest(values);
         try{
-            const msg = `Nueva solicitud: ${values.id}\n${values.product}\nNombre: ${values.name} ${values.lastName}\nWhatsApp: ${values.whatsapp}\nCantidad: ${values.quantity}\nProvincia: ${values.province}`;
+            const msg = `Nueva solicitud: ${values.id}\n${values.product}\nNombre: ${values.name} ${values.lastName}\nWhatsApp: ${values.whatsapp}\nCantidad: ${values.quantity}\nMunicipio: ${values.municipality}\nParajes: ${values.parish}`;
             sendWhatsAppMessage(msg);
         }catch(e){console.warn(e)}
         Swal.fire({icon:'success',title:'Solicitud enviada',text:'El administrador recibirá tu pedido.',confirmButtonColor:'#e74c3c'});
         closeOrderForm();
+        if (requestSource === 'cart') {
+            cart = [];
+            saveCart();
+            renderCartModal();
+        }
         e.target.reset();
     }
 
@@ -1196,11 +1249,7 @@
         document.body.style.overflow='hidden';
         renderAdminList();
         initProductSelectOptions();
-        try {
-            initBlogEditor();
-        } catch (err) {
-            console.warn('initBlogEditor failed', err);
-        }
+        initBlogEditor();
         switchAdminTab('products');
     }
     function closeAdminPanel() { document.getElementById('adminPanel').classList.remove('active'); document.body.style.overflow=''; }
@@ -1301,26 +1350,59 @@
         renderAdminBlogList(); renderBlog();
     }
 
-    function renderAdminRequests(){
-        const requests = JSON.parse(localStorage.getItem('bikeshop_requests')||'[]').reverse();
+    async function copyRequest(requestOrId){
+        const request = typeof requestOrId === 'object' ? requestOrId : getStoredRequests().find((item) => item.id === Number(requestOrId));
+        if (!request) return;
+        const text = JSON.stringify(request, null, 2);
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                throw new Error('Clipboard no disponible');
+            }
+            Swal.fire({icon:'info',title:'Copiado',text:'Solicitud copiada al portapapeles',timer:900,showConfirmButton:false,toast:true,position:'top-right'});
+        } catch (error) {
+            console.warn('No se pudo copiar la solicitud', error);
+            Swal.fire({icon:'warning',title:'No se pudo copiar',text:'Copia manualmente la solicitud desde el panel.',timer:1200,showConfirmButton:false});
+        }
+    }
+
+    function sendRequestWhatsApp(requestOrId){
+        const request = typeof requestOrId === 'object' ? requestOrId : getStoredRequests().find((item) => item.id === Number(requestOrId));
+        if (!request) return;
+        const msg = `Solicitud ${request.id}\n${request.product || 'pedido'}\nCliente: ${request.name || ''} ${request.lastName || ''}\nWhatsApp: ${request.whatsapp || ''}\nMunicipio: ${request.municipality || ''}\nParajes: ${request.parish || ''}`;
+        sendWhatsAppMessage(msg);
+        Swal.fire({icon:'success',title:'Enviado a WhatsApp',timer:900,showConfirmButton:false,toast:true,position:'top-right'});
+    }
+
+    async function markRequestAsAttended(requestId){
+        const requests = getStoredRequests().map((request) => request.id === Number(requestId) ? { ...request, status: 'atendida' } : request);
+        await persistRequests(requests);
+        await renderAdminRequests();
+    }
+
+    async function renderAdminRequests(){
+        const requests = (await loadRequestsFromRemote()).reverse();
         const container = document.getElementById('adminRequestList');
         if(!container) return;
         if(requests.length===0){ container.innerHTML = '<p class="text-gray-500">No hay solicitudes.</p>'; return; }
-        container.innerHTML = requests.map(r=>{
-            const itemsHtml = r.items? r.items.map(it=>`<div class="text-sm">${it.qty}x ${it.name} - $${it.price}</div>`).join('') : '';
+        container.innerHTML = requests.map((r)=>{
+            const itemsHtml = r.items ? r.items.map((it)=>`<div class="text-sm">${it.qty}x ${it.name}${it.price != null ? ` - $${Number(it.price).toFixed(2)}` : ''}</div>`).join('') : '';
+            const locationText = [r.municipality, r.parish].filter(Boolean).join(' · ');
             return `
             <div class="bg-gray-100 p-3 rounded-lg">
-                <div class="flex justify-between items-start">
+                <div class="flex justify-between items-start gap-3">
                     <div>
                         <strong>Solicitud ${r.id}</strong>
-                        <p class="text-sm text-gray-500">${r.date} · ${r.status||'pendiente'}</p>
-                        <div class="mt-2 text-sm">${r.product||''}${itemsHtml?'<div class="mt-2"><strong>Items:</strong>'+itemsHtml+'</div>':''}</div>
-                        <div class="mt-2 text-sm">Contacto: ${r.whatsapp||r.phone||''} · ${r.email||''}</div>
+                        <p class="text-sm text-gray-500">${r.date} · ${r.status || 'pendiente'}</p>
+                        <div class="mt-2 text-sm">${r.product || ''}${itemsHtml ? '<div class="mt-2"><strong>Items:</strong>' + itemsHtml + '</div>' : ''}</div>
+                        <div class="mt-2 text-sm">Contacto: ${r.whatsapp || r.phone || ''} · ${r.email || ''}</div>
+                        ${locationText ? `<div class="mt-1 text-sm">Ubicación: ${locationText}</div>` : ''}
                     </div>
                     <div class="flex flex-col gap-2 ml-3">
-                        <button onclick="(function(){navigator.clipboard?.writeText(JSON.stringify(r));Swal.fire({icon:'info',title:'Copiado',text:'Solicitud copiada al portapapeles',timer:900,showConfirmButton:false,toast:true,position:'top-right'});})();" class="px-3 py-1 border rounded">Copiar</button>
-                        <button onclick="(function(){ sendWhatsAppMessage('Solicitud '+r.id+' - '+(r.product||'pedido') ); Swal.fire({icon:'success',title:'Enviado a WhatsApp',timer:900,showConfirmButton:false,toast:true,position:'top-right'}); })()" class="px-3 py-1 bg-green-500 text-white rounded">Enviar WhatsApp</button>
-                        <button onclick="(function(){ r.status='atendida'; const all=JSON.parse(localStorage.getItem('bikeshop_requests')||'[]').map(x=>x.id===r.id?{...x,status:'atendida'}:x); localStorage.setItem('bikeshop_requests',JSON.stringify(all)); renderAdminRequests(); })()" class="px-3 py-1 bg-blue-500 text-white rounded">Marcar atendida</button>
+                        <button onclick="copyRequest(${r.id})" class="px-3 py-1 border rounded">Copiar</button>
+                        <button onclick="sendRequestWhatsApp(${r.id})" class="px-3 py-1 bg-green-500 text-white rounded">Enviar WhatsApp</button>
+                        <button onclick="markRequestAsAttended(${r.id})" class="px-3 py-1 bg-blue-500 text-white rounded">Marcar atendida</button>
                     </div>
                 </div>
             </div>`;
@@ -1329,7 +1411,7 @@
 
     async function saveBlogs(blogs){
         localStorage.setItem('bikeshop_blogs', JSON.stringify(blogs));
-        if (supabaseClient) {
+        if(supabaseClient){
             try {
                 await supabaseClient.from('blogs').upsert(blogs.map(b=>({
                     id: b.id,
@@ -1347,7 +1429,7 @@
     }
     async function loadBlogs(){
         let blogs = [];
-        if (supabaseClient) {
+        if(supabaseClient){
             try {
                 const { data, error } = await supabaseClient.from('blogs').select('*').order('date', { ascending: false });
                 if(!error && Array.isArray(data) && data.length){
@@ -1396,7 +1478,7 @@
         }
 
         const prod = {
-            id: id ? parseInt(id, 10) : getNextProductId(),
+            id: id ? parseInt(id, 10) : Date.now(),
             name,
             category,
             price,
@@ -1423,7 +1505,15 @@
         renderAll();
         initProductSelectOptions();
         document.getElementById('adminProductForm').reset();
-        showSyncStatus(synced);
+        if (!synced) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Guardado local',
+                text: 'El producto se guardó en este dispositivo, pero no se sincronizó con el servidor. No aparecerá en otros dispositivos hasta que se restaure la conexión o se corrija Supabase.',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        }
         document.getElementById('editProductId').value = '';
         document.getElementById('adminSubmitBtn').textContent = 'Añadir Producto';
         const descriptionInput = document.getElementById('adminDescription');
@@ -1523,12 +1613,12 @@
 
     function initBlogEditor(){
         const editorEl = document.getElementById('blogEditor');
-        if(!editorEl || window.blogQuill) return;
-        if (typeof Quill !== 'function') {
-            console.warn('Quill no está disponible. El editor de blog no se inicializará.');
-            return;
+        if(!editorEl || window.blogQuill || typeof Quill === 'undefined') return;
+        try {
+            window.blogQuill = new Quill('#blogEditor', { theme: 'snow', placeholder: 'Escribe el contenido del blog aquí...' });
+        } catch (error) {
+            console.warn('No se pudo inicializar el editor de blog', error);
         }
-        window.blogQuill = new Quill('#blogEditor', { theme: 'snow', placeholder: 'Escribe el contenido del blog aquí...' });
     }
 
     initBlogEditor();
