@@ -855,6 +855,10 @@
         renderAll();
     }
 
+    function getNextProductId() {
+        return products.reduce((max, p) => Math.max(max, Number(p.id) || 0), 0) + 1;
+    }
+
     function buildSupabaseProduct(product) {
         return {
             id: product.id,
@@ -868,6 +872,30 @@
             stock: product.stock,
             badge: product.badge
         };
+    }
+
+    function showSyncStatus(synced) {
+        if (synced) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sincronizado con Supabase',
+                text: 'El producto se guardó y está disponible en la tabla remota.',
+                timer: 1800,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-right'
+            });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Guardado local',
+                text: 'El producto se guardó en este dispositivo, pero no se sincronizó con Supabase.',
+                timer: 2400,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-right'
+            });
+        }
     }
 
     async function save() {
@@ -1363,7 +1391,7 @@
         }
 
         const prod = {
-            id: id ? parseInt(id, 10) : Date.now(),
+            id: id ? parseInt(id, 10) : getNextProductId(),
             name,
             category,
             price,
@@ -1390,15 +1418,7 @@
         renderAll();
         initProductSelectOptions();
         document.getElementById('adminProductForm').reset();
-        if (!synced) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Guardado local',
-                text: 'El producto se guardó en este dispositivo, pero no se sincronizó con el servidor. No aparecerá en otros dispositivos hasta que se restaure la conexión o se corrija Supabase.',
-                timer: 2500,
-                showConfirmButton: false
-            });
-        }
+        showSyncStatus(synced);
         document.getElementById('editProductId').value = '';
         document.getElementById('adminSubmitBtn').textContent = 'Añadir Producto';
         const descriptionInput = document.getElementById('adminDescription');
