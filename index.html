@@ -662,8 +662,8 @@
         { name: 'Jose Miguel', phone: '18292612879', label: '+1 (829) 261-2879' }
     ];
 
-    function sendWhatsAppMessage(text){
-        openWhatsApp(text);
+    function sendWhatsAppMessage(text, options = {}){
+        return openWhatsApp(text, options);
     }
 
     async function syncLocalRequestsToRemote() {
@@ -1144,33 +1144,55 @@
             status: 'pendiente'
         };
         await persistRequest(values);
-        try{
-            const msg = `Nueva solicitud: ${values.id}\n${values.product}\nNombre: ${values.name} ${values.lastName}\nWhatsApp: ${values.whatsapp}\nCantidad: ${values.quantity}\nMunicipio: ${values.municipality}\nParajes: ${values.parish}`;
-            sendWhatsAppMessage(msg);
-        }catch(e){console.warn(e)}
-        Swal.fire({icon:'success',title:'Solicitud enviada',text:'El administrador recibirá tu pedido.',confirmButtonColor:'#e74c3c'});
+        const msg = `Nueva solicitud: ${values.id}\n${values.product}\nNombre: ${values.name} ${values.lastName}\nWhatsApp: ${values.whatsapp}\nCantidad: ${values.quantity}\nMunicipio: ${values.municipality}\nParajes: ${values.parish}`;
         closeOrderForm();
         if (requestSource === 'cart') {
             cart = [];
             saveCart();
             renderCartModal();
         }
+        try{
+            await sendWhatsAppMessage(msg, { showConfirmationToast: true });
+        }catch(e){
+            console.warn('Error mostrando selector WhatsApp:', e);
+        }
         e.target.reset();
     }
 
-    function openWhatsApp(message){
+    async function openWhatsApp(message, options = {}){
         const text = message && message.length ? message : 'Hola, tengo una consulta sobre sus productos. ¿Me pueden ayudar?';
         try{
-            Swal.fire({
+            if (options.showConfirmationToast) {
+                await Swal.fire({
+                    toast: true,
+                    position: 'top-right',
+                    icon: 'success',
+                    title: 'Solicitud enviada',
+                    text: 'El administrador recibirá tu pedido.',
+                    showConfirmButton: false,
+                    timer: 1800,
+                    timerProgressBar: true
+                });
+            }
+
+            if (!Array.isArray(WHATSAPP_CONTACTS) || WHATSAPP_CONTACTS.length === 0) {
+                const fallbackPhone = '18292612750';
+                window.open('https://wa.me/' + fallbackPhone + '?text=' + encodeURIComponent(text), '_blank');
+                return;
+            }
+
+            const buttonsHtml = WHATSAPP_CONTACTS.map(contact => `
+                <button type="button" data-phone="${contact.phone}" class="whatsapp-select-btn" style="width:100%;padding:0.9rem 1rem;border:none;border-radius:0.75rem;background:#10b981;color:#fff;font-weight:700;cursor:pointer;text-align:left;box-shadow:0 12px 24px rgba(16,185,129,0.25);transition:transform .15s ease;">
+                    <strong>${contact.name}</strong><br><span style="font-size:0.95rem;opacity:0.9;">${contact.label}</span>
+                </button>
+            `).join('');
+
+            return Swal.fire({
                 title: 'Contactar por WhatsApp',
                 html: `
                     <p style="margin:0;font-size:0.95rem;color:#d1d5db;">Selecciona a quién quieres escribir:</p>
                     <div style="display:grid;gap:0.8rem;margin-top:1rem;">
-                        ${WHATSAPP_CONTACTS.map(contact => `
-                            <button type="button" data-phone="${contact.phone}" class="whatsapp-select-btn" style="width:100%;padding:0.9rem 1rem;border:none;border-radius:0.75rem;background:#10b981;color:#fff;font-weight:700;cursor:pointer;text-align:left;box-shadow:0 12px 24px rgba(16,185,129,0.25);transition:transform .15s ease;">
-                                <strong>${contact.name}</strong><br><span style="font-size:0.95rem;opacity:0.9;">${contact.label}</span>
-                            </button>
-                        `).join('')}
+                        ${buttonsHtml}
                     </div>
                 `,
                 showConfirmButton: false,
@@ -1180,12 +1202,28 @@
                 didOpen: () => {
                     const popup = Swal.getPopup();
                     if (!popup) return;
-                    popup.querySelectorAll('button[data-phone]').forEach(btn => {
-                        btn.addEventListener('click', () => {
+                    const buttons = popup.querySelectorAll('button[data-phone]');
+                    if (!buttons || buttons.length === 0) {
+                        console.warn('No se encontraron botones de WhatsApp en la ventana modal.');
+                    }
+                    buttons.forEach(btn => {
+                        const clickHandler = () => {
                             const phone = btn.getAttribute('data-phone');
                             window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
                             Swal.close();
-                        });
+                        };
+                        btn._swalClickHandler = clickHandler;
+                        btn.addEventListener('click', clickHandler);
+                    });
+                },
+                willClose: () => {
+                    const popup = Swal.getPopup();
+                    if (!popup) return;
+                    popup.querySelectorAll('button[data-phone]').forEach(btn => {
+                        if (btn._swalClickHandler) {
+                            btn.removeEventListener('click', btn._swalClickHandler);
+                            delete btn._swalClickHandler;
+                        }
                     });
                 }
             });
@@ -1876,7 +1914,7 @@
         }catch(e){ console.warn('EnhanceButtons failed', e); }
     })();
 
-    Promise.all([loadProducts(), loadBlogs()]).then(() => { 
+    Promise.all([loadProducts(), loadBlogs(), loadRequestsFromRemote()]).then(() => { 
         updateFavCount();
         updateCartCount();
         initProductSelectOptions();
@@ -1884,6 +1922,8 @@
         if (localStorage.getItem('bikeshop_onboarding_seen') !== 'true') {
             setTimeout(() => openOnboardingGuide(), 800);
         }
+    }).catch((err) => {
+        console.warn('Error cargando datos iniciales:', err);
     });
     // Ensure top buttons always open panels even if inline onclicks fail
     (function attachTopButtons(){
