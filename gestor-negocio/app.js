@@ -83,6 +83,11 @@ async function pushToSupabase() {
         items: JSON.stringify(request.items || []),
         related_products: request.related_products || JSON.stringify(request.items || [])
       })), { onConflict: 'id' }),
+      supabaseClient.from('products').upsert(products.map((product) => ({
+        ...product,
+        stock_quantity: Number.isFinite(Number(product.stock_quantity)) ? Number(product.stock_quantity) : null,
+        low_stock_threshold: Number(product.low_stock_threshold) || 2
+      })), { onConflict: 'id' }),
       supabaseClient.from('invoices').upsert(invoices, { onConflict: 'id' }),
       supabaseClient.from('admin_config').upsert([{ id: 1, ...config }], { onConflict: 'id' })
     ]);
@@ -169,6 +174,33 @@ function normalizeStatus(status) {
 
 function getCurrentAdminUser() {
   return config.adminUser || localStorage.getItem('admin_user') || 'Administrador';
+}
+
+function getProductStock(product) {
+  const quantity = Number(product?.stock_quantity);
+  return Number.isFinite(quantity) ? Math.max(0, quantity) : (product?.stock === 'out' ? 0 : Infinity);
+}
+
+async function updateStockForStatus(record, nextStatus) {
+  const previousStatus = normalizeStatus(record.status);
+  const product = products.find((item) => String(item.id) === String(record.productId));
+  const quantity = Math.max(1, Number(record.qty || 1));
+  if (!product || previousStatus === nextStatus) return true;
+
+  if (nextStatus === 'confirmada' && !record.stock_deducted) {
+    if (getProductStock(product) < quantity) {
+      Swal.fire({ icon: 'warning', title: 'Sin existencias', text: `No hay suficientes unidades de ${product.name}.` });
+      return false;
+    }
+    if (Number.isFinite(Number(product.stock_quantity))) product.stock_quantity = Number(product.stock_quantity) - quantity;
+    product.stock = getProductStock(product) === 0 ? 'out' : getProductStock(product) <= Number(product.low_stock_threshold || 2) ? 'low' : 'ok';
+    record.stock_deducted = true;
+  } else if (previousStatus === 'confirmada' && record.stock_deducted && nextStatus !== 'confirmada') {
+    if (Number.isFinite(Number(product.stock_quantity))) product.stock_quantity = Number(product.stock_quantity) + quantity;
+    product.stock = getProductStock(product) <= Number(product.low_stock_threshold || 2) ? 'low' : 'ok';
+    record.stock_deducted = false;
+  }
+  return true;
 }
 
 function renderStatusSelect(record) {
@@ -450,6 +482,7 @@ async function updateRecordStatus(recordType, recordId, status) {
   const collection = recordType === 'request' ? requests : orders;
   const record = collection.find((item) => String(item.id) === String(recordId));
   if (!record) return;
+  if (!await updateStockForStatus(record, normalizedStatus)) return;
   Object.assign(record, {
     status: normalizedStatus,
     status_updated_at: now,
@@ -513,7 +546,7 @@ function populateOrderProducts(select, selectedProduct = '') {
   if (!select) return;
   select.innerHTML = '<option value="">Selecciona un producto</option>' + products.map((product) => `
     <option value="${product.id}" ${String(product.id) === String(selectedProduct) ? 'selected' : ''}>
-      ${product.name} - $${Number(product.price || 0).toFixed(2)}${product.stock === 'low' ? ' - Poco stock' : ''}
+      ${product.name} - $${Number(product.price || 0).toFixed(2)}${Number.isFinite(Number(product.stock_quantity)) ? ` - ${Number(product.stock_quantity)} disponibles` : product.stock === 'low' ? ' - Poco stock' : ''}
     </option>
   `).join('');
 }
@@ -541,7 +574,7 @@ function editOrder(id) {
   document.getElementById('orderModal').classList.remove('hidden');
 }
 
-function saveOrder(event) {
+async function saveOrder(event) {
   event.preventDefault();
   const id = document.getElementById('editOrderId').value;
   const clientId = parseInt(document.getElementById('orderClient').value, 10);
@@ -561,15 +594,18 @@ function saveOrder(event) {
     qty: quantity,
     total: parseFloat(document.getElementById('orderTotal').value) || (Number(product?.price || 0) * quantity),
     delivery: document.getElementById('orderDelivery').value,
-    status: selectedStatus,
-    status_updated_at: previousOrder?.status === selectedStatus ? previousOrder.status_updated_at : new Date().toISOString(),
-    status_updated_by: previousOrder?.status === selectedStatus ? previousOrder.status_updated_by : getCurrentAdminUser(),
+    status: previousOrder?.status || 'pendiente',
+    stock_deducted: previousOrder?.stock_deducted || false,
     deliveryDate: document.getElementById('orderDeliveryDate').value,
     notes: document.getElementById('orderNotes').value.trim(),
     createdAt: id ? orders.find((item) => item.id === parseInt(id, 10))?.createdAt : new Date().toISOString().slice(0, 10)
   };
 
   if (!orderData.products || !clientId) return;
+  if (!await updateStockForStatus(orderData, selectedStatus)) return;
+  orderData.status = selectedStatus;
+  orderData.status_updated_at = previousOrder?.status === selectedStatus ? previousOrder.status_updated_at : new Date().toISOString();
+  orderData.status_updated_by = previousOrder?.status === selectedStatus ? previousOrder.status_updated_by : getCurrentAdminUser();
 
   if (id) {
     const index = orders.findIndex((item) => item.id === orderData.id);
