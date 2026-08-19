@@ -135,11 +135,11 @@
             <div class="flex flex-wrap gap-2 mb-4">
                 <button onclick="filterOrders('todos', event)" data-filter="todos" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn bg-orange-500 text-white">Todos</button>
                 <button onclick="filterOrders('pendiente', event)" data-filter="pendiente" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Pendientes</button>
-                <button onclick="filterOrders('confirmado', event)" data-filter="confirmado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Confirmados</button>
+                <button onclick="filterOrders('confirmada', event)" data-filter="confirmada" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Confirmadas</button>
                 <button onclick="filterOrders('en entrega', event)" data-filter="en entrega" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">En entrega</button>
-                <button onclick="filterOrders('entregado', event)" data-filter="entregado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Entregados</button>
+                <button onclick="filterOrders('entregada', event)" data-filter="entregada" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Entregadas</button>
                 <button onclick="filterOrders('atendida', event)" data-filter="atendida" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Atendidas</button>
-                <button onclick="filterOrders('cancelado', event)" data-filter="cancelado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Cancelados</button>
+                <button onclick="filterOrders('cancelada', event)" data-filter="cancelada" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Canceladas</button>
             </div>
             <div class="card bg-white rounded-xl shadow overflow-x-auto">
                 <table class="w-full min-w-[700px]">
@@ -205,6 +205,10 @@
                 <div>
                     <label class="block font-semibold mb-1">Mensaje prefijado WhatsApp</label>
                     <input type="text" id="configWaMessage" class="w-full border rounded-lg px-4 py-2.5" placeholder="Hola, tu pedido está...">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Usuario administrador</label>
+                    <input type="text" id="configAdminUser" class="w-full border rounded-lg px-4 py-2.5" placeholder="Ej. María - Ventas">
                 </div>
                 <div>
                     <label class="block font-semibold mb-1">Logo (URL)</label>
