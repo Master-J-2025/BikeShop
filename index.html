@@ -671,7 +671,8 @@
         const localRequests = getStoredRequests();
         if (!localRequests.length) return;
         try {
-            await supabaseClient.from('requests').upsert(localRequests.map(serializeRequestForRemote), { onConflict: 'id' });
+            const { error } = await supabaseClient.from('requests').upsert(localRequests.map(serializeRequestForRemote), { onConflict: 'id' });
+            if (error) throw error;
         } catch (err) {
             console.warn('No se pudo sincronizar solicitudes locales con Supabase', err);
         }
@@ -846,7 +847,8 @@
         const normalized = saveStoredRequests((Array.isArray(requests) ? requests : []).map(normalizeRequestForStorage));
         if (supabaseClient) {
             try {
-                await supabaseClient.from('requests').upsert(normalized.map(serializeRequestForRemote), { onConflict: 'id' });
+                const { error } = await supabaseClient.from('requests').upsert(normalized.map(serializeRequestForRemote), { onConflict: 'id' });
+                if (error) throw error;
             } catch (err) {
                 if (err?.code === 'PGRST205' && err?.message?.includes('requests')) {
                     console.warn('No se encontró la tabla "requests" en Supabase. Ejecuta el SQL de esquema para crearla.', err);
@@ -878,7 +880,7 @@
                 const mergedRequests = [
                     ...remoteRequests.map((remote) => {
                         const local = localRequests.find((item) => item.id === remote.id);
-                        return local ? { ...remote, ...local } : remote;
+                        return local ? { ...local, ...remote } : remote;
                     }),
                     ...localRequests.filter((local) => !remoteRequests.some((remote) => remote.id === local.id))
                 ];
