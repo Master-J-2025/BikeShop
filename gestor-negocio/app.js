@@ -32,6 +32,7 @@ let products = [];
 let invoices = [];
 let config = { ...defaultConfig };
 let currentFilter = 'todos';
+let currentOrderTypeFilter = 'all';
 
 function initSupabase() {
   if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('tu-proyecto')) {
@@ -75,6 +76,11 @@ async function pushToSupabase() {
     await Promise.all([
       supabaseClient.from('clients').upsert(clients, { onConflict: 'id' }),
       supabaseClient.from('orders').upsert(orders, { onConflict: 'id' }),
+      supabaseClient.from('requests').upsert(requests.map((request) => ({
+        ...request,
+        items: JSON.stringify(request.items || []),
+        related_products: request.related_products || JSON.stringify(request.items || [])
+      })), { onConflict: 'id' }),
       supabaseClient.from('invoices').upsert(invoices, { onConflict: 'id' }),
       supabaseClient.from('admin_config').upsert([{ id: 1, ...config }], { onConflict: 'id' })
     ]);
@@ -147,6 +153,10 @@ function getDisplayOrders() {
       recordType: 'request'
     }))
   ];
+}
+
+function hasOrderForRequest(requestId) {
+  return orders.some((order) => String(order.request_id || order.requestId) === String(requestId));
 }
 
 function formatRequestItems(items) {
@@ -364,12 +374,15 @@ function renderOrders(filter = currentFilter) {
   currentFilter = filter;
   setOrderFilterButtons(currentFilter);
   const allOrders = getDisplayOrders();
-  const filteredOrders = filter === 'todos' ? allOrders : allOrders.filter((order) => order.status === filter);
+  const typedOrders = currentOrderTypeFilter === 'all'
+    ? allOrders
+    : allOrders.filter((order) => order.recordType === currentOrderTypeFilter);
+  const filteredOrders = filter === 'todos' ? typedOrders : typedOrders.filter((order) => order.status === filter);
 
   document.getElementById('ordersTable').innerHTML = filteredOrders.map((order) => {
     const client = getClientForRecord(order);
     const orderActions = order.recordType === 'request'
-      ? `<button type="button" onclick="generateInvoiceFromOrder(${order.id})" class="text-purple-500" title="Generar factura"><i class="fas fa-file-invoice"></i></button>`
+      ? `${hasOrderForRequest(order.id) ? '<span class="text-gray-400 text-xs">Convertida</span>' : `<button type="button" onclick="convertRequestToOrder(${order.id})" class="text-orange-500" title="Convertir en pedido"><i class="fas fa-exchange-alt"></i></button>`}`
       : `<button type="button" onclick="editOrder(${order.id})" class="text-blue-500" title="Editar pedido"><i class="fas fa-edit"></i></button>
           <button type="button" onclick="deleteOrder(${order.id})" class="text-red-500" title="Eliminar pedido"><i class="fas fa-trash"></i></button>
           <button type="button" onclick="generateInvoiceFromOrder(${order.id})" class="text-purple-500" title="Generar factura"><i class="fas fa-file-invoice"></i></button>`;
@@ -390,8 +403,58 @@ function renderOrders(filter = currentFilter) {
   }).join('') || '<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay pedidos</td></tr>';
 }
 
+function setOrderTypeFilterButtons(type) {
+  document.querySelectorAll('.order-type-filter-btn').forEach((button) => {
+    const active = button.dataset.typeFilter === type;
+    button.classList.toggle('bg-orange-500', active);
+    button.classList.toggle('text-white', active);
+  });
+}
+
+function filterOrderType(type) {
+  currentOrderTypeFilter = type;
+  setOrderTypeFilterButtons(type);
+  renderOrders(currentFilter);
+}
+
 function filterOrders(status, event) {
   renderOrders(status);
+}
+
+async function convertRequestToOrder(requestId) {
+  const request = requests.find((item) => String(item.id) === String(requestId));
+  if (!request || hasOrderForRequest(requestId)) return;
+  const client = getClientForRecord(request);
+  if (!client) {
+    Swal.fire({ icon: 'warning', title: 'Cliente no encontrado', text: 'La solicitud debe tener un cliente asociado antes de convertirla.' });
+    return;
+  }
+  const items = parseRequestItems(request.items);
+  const firstItem = items[0];
+  const product = products.find((item) => (firstItem?.id && String(item.id) === String(firstItem.id))
+    || (firstItem?.name && item.name?.toLowerCase() === firstItem.name.toLowerCase()));
+  const order = {
+    id: Date.now(),
+    request_id: request.id,
+    clientId: client.id,
+    clientName: client.name,
+    productId: product?.id || firstItem?.id || null,
+    productImage: product?.image || firstItem?.image || '',
+    products: product?.name || firstItem?.name || request.product || formatRequestItems(request.items),
+    qty: Number(firstItem?.qty || request.quantity || 1),
+    total: Number(request.total) || 0,
+    delivery: request.delivery || 'tienda',
+    status: 'pendiente',
+    deliveryDate: '',
+    notes: request.comment || '',
+    createdAt: request.created_at || request.date || new Date().toISOString()
+  };
+  orders.push(order);
+  request.status = 'atendida';
+  saveData();
+  renderOrders(currentFilter);
+  renderDashboard();
+  Swal.fire({ icon: 'success', title: 'Solicitud convertida', text: `Pedido #${order.id} creado correctamente.`, timer: 1800, showConfirmButton: false });
 }
 
 function openOrderForm() {
