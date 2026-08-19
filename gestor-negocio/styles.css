@@ -120,15 +120,15 @@ body.dark .bg-gray-100 {
     transform: translateX(-100%);
     width: min(82vw, 290px);
   }
-  .sidebar.open {
-    transform: translateX(0);
+  #sidebar.open {
+    transform: translateX(0) !important;
   }
   .main-content {
     margin-left: 0;
     padding: 0 12px 24px;
   }
   .mobile-header {
-    display: flex;
+    display: flex !important;
     position: sticky;
     top: 0;
     z-index: 30;
@@ -216,6 +216,9 @@ body.dark .bg-gray-100 {
   }
   body.dark .mobile-brand {
     color: #e0e0e0;
+  }
+  #sidebarOverlay:not(.hidden) {
+    display: block !important;
   }
 }
 
