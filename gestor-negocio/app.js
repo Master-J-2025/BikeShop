@@ -72,6 +72,30 @@ function saveData() {
   pushToSupabase().catch((err) => console.warn('Error sincronizando con Supabase', err));
 }
 
+function getNextInvoiceNumber() {
+  return invoices.reduce((highest, invoice) => Math.max(highest, Number(invoice.invoiceNumber || 0)), 0) + 1;
+}
+
+function serializeInvoiceForRemote(invoice) {
+  return {
+    id: invoice.id,
+    invoice_number: invoice.invoiceNumber,
+    order_id: invoice.orderId,
+    client_id: invoice.clientId,
+    client_name: invoice.clientName || '',
+    client_phone: invoice.clientPhone || '',
+    client_email: invoice.clientEmail || '',
+    date: invoice.date,
+    detail: invoice.detail || '',
+    items: JSON.stringify(invoice.items || []),
+    subtotal: Number(invoice.subtotal) || 0,
+    tax_rate: Number(invoice.taxRate) || 0,
+    tax: Number(invoice.tax) || 0,
+    total: Number(invoice.total) || 0,
+    payment: invoice.payment || 'pendiente'
+  };
+}
+
 async function pushToSupabase() {
   if (!supabaseClient) return;
   try {
@@ -88,7 +112,7 @@ async function pushToSupabase() {
         stock_quantity: Number.isFinite(Number(product.stock_quantity)) ? Number(product.stock_quantity) : null,
         low_stock_threshold: Number(product.low_stock_threshold) || 2
       })), { onConflict: 'id' }),
-      supabaseClient.from('invoices').upsert(invoices, { onConflict: 'id' }),
+      supabaseClient.from('invoices').upsert(invoices.map(serializeInvoiceForRemote), { onConflict: 'id' }),
       supabaseClient.from('admin_config').upsert([{ id: 1, ...config }], { onConflict: 'id' })
     ]);
   } catch (error) {
@@ -131,7 +155,20 @@ async function syncDataFromSupabase() {
       await syncRequestClients();
     }
     if (!invoicesError && Array.isArray(remoteInvoices) && remoteInvoices.length) {
-      invoices = remoteInvoices;
+      invoices = remoteInvoices.map((invoice) => ({
+        ...invoice,
+        invoiceNumber: invoice.invoice_number || invoice.id,
+        orderId: invoice.order_id,
+        clientId: invoice.client_id,
+        clientName: invoice.client_name,
+        clientPhone: invoice.client_phone,
+        clientEmail: invoice.client_email,
+        items: parseRequestItems(invoice.items),
+        subtotal: Number(invoice.subtotal) || 0,
+        taxRate: Number(invoice.tax_rate) || 0,
+        tax: Number(invoice.tax) || 0,
+        total: Number(invoice.total) || 0
+      }));
     }
     if (!productsError && Array.isArray(remoteProducts) && remoteProducts.length) {
       products = remoteProducts;
@@ -637,7 +674,7 @@ function renderInvoices() {
     const client = clients.find((item) => item.id === invoice.clientId);
     return `
       <tr class="border-b table-row">
-        <td class="p-3 font-bold">#${invoice.id}</td>
+        <td class="p-3 font-bold">#${invoice.invoiceNumber || invoice.id}</td>
         <td class="p-3">${invoice.date}</td>
         <td class="p-3">${client ? client.name : '-'}</td>
         <td class="p-3">#${invoice.orderId}</td>
@@ -646,6 +683,7 @@ function renderInvoices() {
         <td class="p-3 flex gap-2">
           <button type="button" onclick="deleteInvoice(${invoice.id})" class="text-red-500"><i class="fas fa-trash"></i></button>
           <button type="button" onclick="printInvoice(${invoice.id})" class="text-blue-500"><i class="fas fa-print"></i></button>
+          <button type="button" onclick="downloadInvoicePdf(${invoice.id})" class="text-green-600" title="Descargar PDF"><i class="fas fa-file-pdf"></i></button>
         </td>
       </tr>
     `;
@@ -661,6 +699,7 @@ function generateInvoiceFromOrder(orderId) {
   document.getElementById('invoiceClientDisplay').value = client?.name || order.clientName || order.name || '';
   document.getElementById('invoiceDetail').value = order.products;
   document.getElementById('invoiceModal').dataset.orderItems = JSON.stringify(order.items || []);
+  document.getElementById('invoiceTaxRate').value = 0;
   document.getElementById('invoiceTotal').value = order.total || 0;
   document.getElementById('invoicePayment').value = 'pendiente';
   document.getElementById('invoiceModal').classList.remove('hidden');
@@ -676,16 +715,28 @@ function saveInvoice(event) {
   const order = getDisplayOrders().find((item) => item.id === orderId);
   const client = getClientForRecord(order);
   const orderProduct = products.find((product) => String(product.id) === String(order?.productId));
+  const items = JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]').length
+    ? JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]')
+    : (orderProduct ? [{ id: orderProduct.id, name: orderProduct.name, qty: order.qty || 1, price: orderProduct.price, image: orderProduct.image }] : []);
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.qty) || 1), 0)
+    || parseFloat(document.getElementById('invoiceTotal').value) || 0;
+  const taxRate = Math.max(0, parseFloat(document.getElementById('invoiceTaxRate').value) || 0);
+  const tax = subtotal * taxRate / 100;
   const invoice = {
     id: Date.now(),
+    invoiceNumber: getNextInvoiceNumber(),
     orderId,
     clientId: client ? client.id : null,
+    clientName: client?.name || order?.name || '',
+    clientPhone: client?.phone || order?.whatsapp || '',
+    clientEmail: client?.email || order?.email || '',
     date: new Date().toISOString().slice(0, 10),
     detail: document.getElementById('invoiceDetail').value.trim(),
-    items: JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]').length
-      ? JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]')
-      : (orderProduct ? [{ id: orderProduct.id, name: orderProduct.name, qty: order.qty || 1, price: orderProduct.price, image: orderProduct.image }] : []),
-    total: parseFloat(document.getElementById('invoiceTotal').value) || 0,
+    items,
+    subtotal,
+    taxRate,
+    tax,
+    total: subtotal + tax,
     payment: document.getElementById('invoicePayment').value
   };
   invoices.push(invoice);
@@ -703,6 +754,79 @@ function deleteInvoice(id) {
     saveData();
     renderInvoices();
   });
+}
+
+function getInvoiceItems(invoice) {
+  return Array.isArray(invoice.items) && invoice.items.length
+    ? invoice.items
+    : (invoice.detail || '').split(',').map((name) => ({ name: name.trim(), qty: 1 })).filter((item) => item.name);
+}
+
+async function loadImageAsDataUrl(url) {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    return '';
+  }
+}
+
+async function downloadInvoicePdf(id) {
+  const invoice = invoices.find((item) => item.id === id);
+  if (!invoice || !window.jspdf?.jsPDF) {
+    Swal.fire({ icon: 'warning', title: 'PDF no disponible', text: 'Carga nuevamente el panel para activar la descarga.' });
+    return;
+  }
+  const doc = new window.jspdf.jsPDF();
+  const client = clients.find((item) => item.id === invoice.clientId);
+  const items = getInvoiceItems(invoice);
+  const logoData = await loadImageAsDataUrl(new URL(config.logoUrl || 'icon.png', window.location.href).href);
+  if (logoData) doc.addImage(logoData, 'PNG', 15, 12, 20, 20);
+  doc.setFontSize(16);
+  doc.text(config.storeName || 'BikeShop', 42, 20);
+  doc.setFontSize(10);
+  doc.text(`Factura #${invoice.invoiceNumber || invoice.id}`, 42, 27);
+  doc.text(`Fecha: ${invoice.date}`, 145, 20);
+  doc.text(`Cliente: ${client?.name || invoice.clientName || 'N/A'}`, 15, 43);
+  doc.text(`Correo: ${client?.email || invoice.clientEmail || 'N/A'}`, 15, 49);
+  let y = 65;
+  doc.setFontSize(11);
+  doc.text('Producto', 15, y);
+  doc.text('Cant.', 115, y);
+  doc.text('Precio', 140, y);
+  doc.text('Importe', 175, y);
+  y += 7;
+  doc.setFontSize(10);
+  for (const item of items) {
+    const quantity = Number(item.qty) || 1;
+    const price = Number(item.price) || 0;
+    const imageUrl = item.image || products.find((product) => String(product.id) === String(item.id))?.image;
+    if (imageUrl) {
+      const imageData = await loadImageAsDataUrl(new URL(imageUrl, window.location.href).href);
+      if (imageData) doc.addImage(imageData, 'JPEG', 15, y - 5, 10, 10);
+    }
+    doc.text(String(item.name || 'Producto').slice(0, 45), 29, y);
+    doc.text(String(quantity), 118, y);
+    doc.text(`$${price.toFixed(2)}`, 140, y);
+    doc.text(`$${(price * quantity).toFixed(2)}`, 175, y);
+    y += 14;
+  }
+  doc.line(15, y, 195, y);
+  y += 8;
+  doc.text(`Subtotal: $${Number(invoice.subtotal || 0).toFixed(2)}`, 140, y);
+  y += 7;
+  doc.text(`Impuesto (${Number(invoice.taxRate || 0).toFixed(2)}%): $${Number(invoice.tax || 0).toFixed(2)}`, 140, y);
+  y += 9;
+  doc.setFontSize(13);
+  doc.text(`Total: $${Number(invoice.total || 0).toFixed(2)}`, 140, y);
+  doc.save(`factura-${invoice.invoiceNumber || invoice.id}.pdf`);
 }
 
 function printInvoice(id) {
@@ -761,8 +885,9 @@ function printInvoice(id) {
           <div class="card-header">
             <div class="store-title">${logoHtml}<div style="display:flex;flex-direction:column;align-items:flex-start"><div style="font-size:18px;color:var(--accent)">${config.storeName || 'Server Home'}</div><div style="font-size:13px;color:#6b7280">Recibo de Pedido</div></div></div>
             <div class="meta">
-              <div><strong>ID:</strong> #${invoice.id}</div>
-              <div><strong>Cliente:</strong> ${client ? client.name : 'N/A'}</div>
+              <div><strong>Factura:</strong> #${invoice.invoiceNumber || invoice.id}</div>
+              <div><strong>Cliente:</strong> ${client ? client.name : (invoice.clientName || 'N/A')}</div>
+              <div><strong>Correo:</strong> ${client?.email || invoice.clientEmail || 'N/A'}</div>
               <div><strong>Fecha:</strong> ${invoice.date}</div>
               <div><strong>Estado:</strong> ${invoice.payment}</div>
             </div>
@@ -773,8 +898,8 @@ function printInvoice(id) {
               ${itemsHtml}
             </div>
             <div class="total-row">
-              <div style="font-weight:700">Total:</div>
-              <div style="font-size:20px;font-weight:800">$${invoice.total.toFixed(2)}</div>
+              <div><div>Subtotal: $${Number(invoice.subtotal || invoice.total || 0).toFixed(2)}</div><div>Impuesto (${Number(invoice.taxRate || 0).toFixed(2)}%): $${Number(invoice.tax || 0).toFixed(2)}</div><strong>Total:</strong></div>
+              <div style="font-size:20px;font-weight:800">$${Number(invoice.total || 0).toFixed(2)}</div>
             </div>
             <div class="btns">
               <button class="btn btn-print" onclick="window.print()">Imprimir recibo</button>
