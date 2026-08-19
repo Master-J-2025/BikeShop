@@ -300,6 +300,21 @@ button, input, select, textarea {
   color: #1e40af;
 }
 
+.status-select {
+  width: auto;
+  min-width: 118px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.status-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
