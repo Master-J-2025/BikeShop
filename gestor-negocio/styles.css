@@ -295,6 +295,11 @@ button, input, select, textarea {
   color: #721c24;
 }
 
+.status-atendida {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
