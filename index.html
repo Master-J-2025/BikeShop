@@ -1469,7 +1469,12 @@
     }
 
     async function markRequestAsAttended(requestId){
-        const requests = getStoredRequests().map((request) => request.id === Number(requestId) ? { ...request, status: 'atendida' } : request);
+        const requests = getStoredRequests().map((request) => request.id === Number(requestId) ? {
+            ...request,
+            status: 'atendida',
+            status_updated_at: new Date().toISOString(),
+            status_updated_by: 'Administrador'
+        } : request);
         await persistRequests(requests);
         cachedRequests = requests;
         await renderAdminRequests();
@@ -1514,7 +1519,7 @@
                 <div class="flex justify-between items-start gap-3">
                     <div>
                         <strong>Solicitud ${r.id}</strong>
-                        <p class="text-sm text-gray-500">${r.date} · ${r.status || 'pendiente'}</p>
+                        <p class="text-sm text-gray-500">${r.date} · ${r.status || 'pendiente'}${r.status_updated_at ? ` · Actualizada: ${new Date(r.status_updated_at).toLocaleString('es-DO')}` : ''}</p>
                         <div class="mt-2 text-sm">${r.product || ''}${itemsHtml ? '<div class="mt-2"><strong>Items:</strong>' + itemsHtml + '</div>' : ''}</div>
                         <div class="mt-2 text-sm">Contacto: ${r.whatsapp || r.phone || ''} · ${r.email || ''}</div>
                         ${locationText ? `<div class="mt-1 text-sm">Ubicación: ${locationText}</div>` : ''}
