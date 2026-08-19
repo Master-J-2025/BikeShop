@@ -68,9 +68,17 @@
     <!-- Contenido principal -->
     <div class="main-content" id="mainContent">
         <!-- Header móvil -->
-        <div class="mobile-header items-center gap-3 mb-6 md:hidden">
-            <button onclick="openSidebar()" class="text-2xl p-2"><i class="fas fa-bars"></i></button>
-            <h2 class="font-bold text-lg">BikeShop Admin</h2>
+        <div class="mobile-header">
+            <button type="button" onclick="openSidebar()" class="mobile-menu-button" aria-label="Abrir menú">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="#" class="mobile-brand" onclick="navigateTo('dashboard'); return false;">
+                <img src="icon.png" alt="BikeShop" class="mobile-brand-logo">
+                <span id="mobileBrandName">BikeShop Admin</span>
+            </a>
+            <button type="button" onclick="toggleDarkMode()" class="mobile-theme-button" aria-label="Cambiar tema">
+                <i class="fas fa-moon" id="mobileDarkIcon"></i>
+            </button>
         </div>
 
         <!-- ========== DASHBOARD ========== -->
@@ -242,7 +250,9 @@
                 </div>
                 <div>
                     <label class="block font-semibold mb-1">Productos solicitados *</label>
-                    <textarea id="orderProducts" placeholder="Ej: Frenos Shimano x2, Cadena KMC x1" required class="w-full border rounded-lg px-4 py-2.5" rows="2"></textarea>
+                    <select id="orderProducts" required class="w-full border rounded-lg px-4 py-2.5">
+                        <option value="">Selecciona un producto</option>
+                    </select>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
