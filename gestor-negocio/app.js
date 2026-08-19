@@ -389,10 +389,22 @@ function filterOrders(status, event) {
 
 function openOrderForm() {
   const select = document.getElementById('orderClient');
+  const productSelect = document.getElementById('orderProducts');
+  const orderForm = document.querySelector('#orderModal form');
   select.innerHTML = clients.map((client) => `<option value="${client.id}">${client.name} (${client.phone})</option>`).join('');
-  document.getElementById('orderForm').reset();
+  populateOrderProducts(productSelect);
+  if (orderForm) orderForm.reset();
   document.getElementById('editOrderId').value = '';
   document.getElementById('orderModal').classList.remove('hidden');
+}
+
+function populateOrderProducts(select, selectedProduct = '') {
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecciona un producto</option>' + products.map((product) => `
+    <option value="${product.id}" ${String(product.id) === String(selectedProduct) ? 'selected' : ''}>
+      ${product.name} - $${Number(product.price || 0).toFixed(2)}${product.stock === 'low' ? ' - Poco stock' : ''}
+    </option>
+  `).join('');
 }
 
 function closeOrderModal() {
@@ -406,7 +418,9 @@ function editOrder(id) {
   document.getElementById('orderClient').innerHTML = clients.map((client) => `
     <option value="${client.id}" ${client.id === order.clientId ? 'selected' : ''}>${client.name} (${client.phone})</option>
   `).join('');
-  document.getElementById('orderProducts').value = order.products;
+  const product = products.find((item) => String(item.id) === String(order.productId)
+    || item.name === order.products);
+  populateOrderProducts(document.getElementById('orderProducts'), product?.id || '');
   document.getElementById('orderQty').value = order.qty || 1;
   document.getElementById('orderTotal').value = order.total || '';
   document.getElementById('orderDelivery').value = order.delivery;
@@ -421,13 +435,18 @@ function saveOrder(event) {
   const id = document.getElementById('editOrderId').value;
   const clientId = parseInt(document.getElementById('orderClient').value, 10);
   const client = clients.find((item) => item.id === clientId);
+  const productId = document.getElementById('orderProducts').value;
+  const product = products.find((item) => String(item.id) === String(productId));
+  const quantity = parseInt(document.getElementById('orderQty').value, 10) || 1;
   const orderData = {
     id: id ? parseInt(id, 10) : Date.now(),
     clientId,
     clientName: client ? client.name : 'Desconocido',
-    products: document.getElementById('orderProducts').value.trim(),
-    qty: parseInt(document.getElementById('orderQty').value, 10) || 1,
-    total: parseFloat(document.getElementById('orderTotal').value) || 0,
+    productId: product ? product.id : null,
+    productImage: product?.image || '',
+    products: product ? product.name : '',
+    qty: quantity,
+    total: parseFloat(document.getElementById('orderTotal').value) || (Number(product?.price || 0) * quantity),
     delivery: document.getElementById('orderDelivery').value,
     status: document.getElementById('orderStatus').value,
     deliveryDate: document.getElementById('orderDeliveryDate').value,
@@ -505,13 +524,16 @@ function saveInvoice(event) {
   const orderId = parseInt(document.getElementById('invoiceOrderId').value, 10);
   const order = getDisplayOrders().find((item) => item.id === orderId);
   const client = getClientForRecord(order);
+  const orderProduct = products.find((product) => String(product.id) === String(order?.productId));
   const invoice = {
     id: Date.now(),
     orderId,
     clientId: client ? client.id : null,
     date: new Date().toISOString().slice(0, 10),
     detail: document.getElementById('invoiceDetail').value.trim(),
-    items: JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]'),
+    items: JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]').length
+      ? JSON.parse(document.getElementById('invoiceModal').dataset.orderItems || '[]')
+      : (orderProduct ? [{ id: orderProduct.id, name: orderProduct.name, qty: order.qty || 1, price: orderProduct.price, image: orderProduct.image }] : []),
     total: parseFloat(document.getElementById('invoiceTotal').value) || 0,
     payment: document.getElementById('invoicePayment').value
   };
@@ -698,6 +720,10 @@ function updateBrandFromConfig() {
   if (brandNameElement) {
     brandNameElement.textContent = config.storeName || 'BikeShop Admin';
   }
+  const mobileBrandNameElement = document.getElementById('mobileBrandName');
+  if (mobileBrandNameElement) {
+    mobileBrandNameElement.textContent = config.storeName || 'BikeShop Admin';
+  }
   if (brandTaglineElement) {
     brandTaglineElement.textContent = config.brandTagline || 'Panel de administración';
   }
@@ -709,6 +735,8 @@ function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark');
   localStorage.setItem(STORAGE_KEYS.darkMode, String(isDark));
   document.getElementById('darkIcon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+  const mobileDarkIcon = document.getElementById('mobileDarkIcon');
+  if (mobileDarkIcon) mobileDarkIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
 }
 
 function init() {
@@ -717,6 +745,8 @@ function init() {
   if (localStorage.getItem(STORAGE_KEYS.darkMode) === 'true') {
     document.body.classList.add('dark');
     document.getElementById('darkIcon').className = 'fas fa-sun';
+    const mobileDarkIcon = document.getElementById('mobileDarkIcon');
+    if (mobileDarkIcon) mobileDarkIcon.className = 'fas fa-sun';
   }
   if (supabaseClient) {
     syncDataFromSupabase().catch((err) => console.warn('No se pudo cargar datos desde Supabase', err));
