@@ -14,12 +14,14 @@ const defaultConfig = {
   address: '',
   policy: '',
   waMessage: 'Hola, tu pedido está en proceso. Número de seguimiento: {pedido}',
-  logoUrl: 'icon.png'
+  logoUrl: 'icon.png',
+  adminUser: 'Administrador'
 };
 
 const defaultClients = [];
 const defaultOrders = [];
 const defaultInvoices = [];
+const STATUS_OPTIONS = ['pendiente', 'confirmada', 'atendida', 'en entrega', 'entregada', 'cancelada'];
 
 const SUPABASE_URL = 'https://vjyjpldllxctthxujxwo.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_UZzyrkER1ZptcTUuNwNyqA_oiKCvQUc';
@@ -146,13 +148,33 @@ async function syncDataFromSupabase() {
 
 function getDisplayOrders() {
   return [
-    ...orders.map((order) => ({ ...order, recordType: 'order' })),
+    ...orders.map((order) => ({ ...order, status: normalizeStatus(order.status), recordType: 'order' })),
     ...requests.map((request) => ({
       ...request,
+      status: normalizeStatus(request.status),
       clientId: getClientForRecord(request)?.id || request.id,
       recordType: 'request'
     }))
   ];
+}
+
+function normalizeStatus(status) {
+  const aliases = {
+    confirmado: 'confirmada',
+    entregado: 'entregada',
+    cancelado: 'cancelada'
+  };
+  return aliases[status] || (STATUS_OPTIONS.includes(status) ? status : 'pendiente');
+}
+
+function getCurrentAdminUser() {
+  return config.adminUser || localStorage.getItem('admin_user') || 'Administrador';
+}
+
+function renderStatusSelect(record) {
+  return `<select class="status-select" aria-label="Estado" onchange="updateRecordStatus('${record.recordType}', ${record.id}, this.value)">
+    ${STATUS_OPTIONS.map((status) => `<option value="${status}" ${normalizeStatus(record.status) === status ? 'selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`).join('')}
+  </select>`;
 }
 
 function hasOrderForRequest(requestId) {
@@ -393,7 +415,7 @@ function renderOrders(filter = currentFilter) {
         <td class="p-3 text-sm">${order.products}</td>
         <td class="p-3">$${(Number(order.total) || 0).toFixed(2)}</td>
         <td class="p-3">${order.delivery === 'domicilio' ? 'Domicilio' : 'Tienda'}</td>
-        <td class="p-3"><span class="badge-status status-${order.status.replace(/\s+/g, '-')}">${order.status}</span></td>
+              <td class="p-3">${renderStatusSelect(order)}<small class="status-meta">${order.status_updated_by || ''}${order.status_updated_at ? ` · ${new Date(order.status_updated_at).toLocaleString('es-DO')}` : ''}</small></td>
         <td class="p-3 flex gap-2 flex-wrap">
           ${orderActions}
           ${client ? `<a href="https://wa.me/${client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(config.waMessage.replace('{pedido}', order.id))}" target="_blank" class="text-green-500"><i class="fab fa-whatsapp"></i></a>` : ''}
@@ -419,6 +441,23 @@ function filterOrderType(type) {
 
 function filterOrders(status, event) {
   renderOrders(status);
+}
+
+async function updateRecordStatus(recordType, recordId, status) {
+  const normalizedStatus = normalizeStatus(status);
+  const now = new Date().toISOString();
+  const updatedBy = getCurrentAdminUser();
+  const collection = recordType === 'request' ? requests : orders;
+  const record = collection.find((item) => String(item.id) === String(recordId));
+  if (!record) return;
+  Object.assign(record, {
+    status: normalizedStatus,
+    status_updated_at: now,
+    status_updated_by: updatedBy
+  });
+  saveData();
+  renderOrders(currentFilter);
+  renderDashboard();
 }
 
 async function convertRequestToOrder(requestId) {
@@ -451,6 +490,8 @@ async function convertRequestToOrder(requestId) {
   };
   orders.push(order);
   request.status = 'atendida';
+  request.status_updated_at = new Date().toISOString();
+  request.status_updated_by = getCurrentAdminUser();
   saveData();
   renderOrders(currentFilter);
   renderDashboard();
@@ -508,6 +549,8 @@ function saveOrder(event) {
   const productId = document.getElementById('orderProducts').value;
   const product = products.find((item) => String(item.id) === String(productId));
   const quantity = parseInt(document.getElementById('orderQty').value, 10) || 1;
+  const previousOrder = id ? orders.find((item) => item.id === parseInt(id, 10)) : null;
+  const selectedStatus = normalizeStatus(document.getElementById('orderStatus').value);
   const orderData = {
     id: id ? parseInt(id, 10) : Date.now(),
     clientId,
@@ -518,7 +561,9 @@ function saveOrder(event) {
     qty: quantity,
     total: parseFloat(document.getElementById('orderTotal').value) || (Number(product?.price || 0) * quantity),
     delivery: document.getElementById('orderDelivery').value,
-    status: document.getElementById('orderStatus').value,
+    status: selectedStatus,
+    status_updated_at: previousOrder?.status === selectedStatus ? previousOrder.status_updated_at : new Date().toISOString(),
+    status_updated_by: previousOrder?.status === selectedStatus ? previousOrder.status_updated_by : getCurrentAdminUser(),
     deliveryDate: document.getElementById('orderDeliveryDate').value,
     notes: document.getElementById('orderNotes').value.trim(),
     createdAt: id ? orders.find((item) => item.id === parseInt(id, 10))?.createdAt : new Date().toISOString().slice(0, 10)
@@ -720,6 +765,7 @@ function loadConfig() {
   document.getElementById('configAddress').value = config.address || '';
   document.getElementById('configPolicy').value = config.policy || '';
   document.getElementById('configWaMessage').value = config.waMessage || '';
+  document.getElementById('configAdminUser').value = config.adminUser || 'Administrador';
   document.getElementById('configLogoUrl').value = config.logoUrl || '';
   const preview = document.getElementById('configLogoPreview');
   if (preview) { preview.src = config.logoUrl || ''; preview.style.display = config.logoUrl ? 'block' : 'none'; }
@@ -737,7 +783,8 @@ function saveConfig(event) {
     address: document.getElementById('configAddress').value.trim(),
     policy: document.getElementById('configPolicy').value.trim(),
     waMessage: document.getElementById('configWaMessage').value.trim(),
-    logoUrl: document.getElementById('configLogoUrl').value.trim()
+    logoUrl: document.getElementById('configLogoUrl').value.trim(),
+    adminUser: document.getElementById('configAdminUser').value.trim() || 'Administrador'
   };
   updateBrandFromConfig();
   saveData();
