@@ -113,17 +113,109 @@ body.dark .bg-gray-100 {
 }
 
 @media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
   .sidebar {
     transform: translateX(-100%);
+    width: min(82vw, 290px);
   }
   .sidebar.open {
     transform: translateX(0);
   }
   .main-content {
     margin-left: 0;
+    padding: 0 12px 24px;
   }
   .mobile-header {
     display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    min-height: 64px;
+    align-items: center;
+    gap: 10px;
+    margin: 0 -12px 18px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+  }
+  .mobile-menu-button,
+  .mobile-theme-button {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 12px;
+    background: #f1f5f9;
+    color: var(--primary);
+  }
+  .mobile-brand {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .mobile-brand span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mobile-brand-logo {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+    border-radius: 9px;
+    background: white;
+  }
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  #dashboardCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  #dashboardCards .card {
+    min-width: 0;
+    padding: 12px;
+  }
+  #dashboardCards .text-3xl {
+    font-size: 1.6rem;
+  }
+  .card.overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+  .modal-content {
+    max-height: calc(100vh - 24px);
+  }
+  body.dark .mobile-header {
+    background: rgba(22, 33, 62, 0.96);
+    border-color: #2a2a4a;
+  }
+  body.dark .mobile-menu-button,
+  body.dark .mobile-theme-button {
+    background: #1a1a2e;
+    color: #e0e0e0;
+  }
+  body.dark .mobile-brand {
+    color: #e0e0e0;
   }
 }
 
