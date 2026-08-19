@@ -128,6 +128,11 @@
                 </button>
             </div>
             <div class="flex flex-wrap gap-2 mb-4">
+                <button onclick="filterOrderType('all')" data-type-filter="all" type="button" class="px-4 py-1.5 rounded-full text-sm border order-type-filter-btn bg-orange-500 text-white">Todos</button>
+                <button onclick="filterOrderType('order')" data-type-filter="order" type="button" class="px-4 py-1.5 rounded-full text-sm border order-type-filter-btn">Pedidos</button>
+                <button onclick="filterOrderType('request')" data-type-filter="request" type="button" class="px-4 py-1.5 rounded-full text-sm border order-type-filter-btn">Solicitudes</button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
                 <button onclick="filterOrders('todos', event)" data-filter="todos" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn bg-orange-500 text-white">Todos</button>
                 <button onclick="filterOrders('pendiente', event)" data-filter="pendiente" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Pendientes</button>
                 <button onclick="filterOrders('confirmado', event)" data-filter="confirmado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Confirmados</button>
