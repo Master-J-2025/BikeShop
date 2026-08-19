@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BikeShop Admin - Gestión de Pedidos</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        accent: '#e74c3c',
+                        success: '#2ecc71',
+                        warning: '#f39c12',
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div class="p-5 border-b border-white/10">
+            <h2 class="text-white font-bold text-xl flex items-center gap-2">
+                <i class="fas fa-bicycle text-orange-500"></i>
+                <span id="brandName">BikeShop Admin</span>
+            </h2>
+            <p class="text-gray-400 text-xs mt-1" id="brandTagline">Panel de administración</p>
+        </div>
+        <nav class="py-4">
+            <a href="#" onclick="navigateTo('dashboard')" class="active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt w-5"></i> Dashboard
+            </a>
+            <a href="#" onclick="navigateTo('clientes')" data-section="clientes">
+                <i class="fas fa-users w-5"></i> Clientes
+            </a>
+            <a href="#" onclick="navigateTo('pedidos')" data-section="pedidos">
+                <i class="fas fa-boxes w-5"></i> Pedidos / Solicitudes
+            </a>
+            <a href="#" onclick="navigateTo('facturacion')" data-section="facturacion">
+                <i class="fas fa-file-invoice w-5"></i> Facturación
+            </a>
+            <a href="#" onclick="navigateTo('configuracion')" data-section="configuracion">
+                <i class="fas fa-cog w-5"></i> Configuración
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-0 w-full px-4">
+            <button onclick="toggleDarkMode()" class="w-full text-white/70 hover:text-white text-sm flex items-center gap-2 py-2 px-4 rounded hover:bg-white/10 transition">
+                <i class="fas fa-moon" id="darkIcon"></i> Modo oscuro
+            </button>
+        </div>
+    </aside>
+
+    <!-- Overlay para móvil -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="closeSidebar()"></div>
+
+    <!-- Contenido principal -->
+    <div class="main-content" id="mainContent">
+        <!-- Header móvil -->
+        <div class="mobile-header items-center gap-3 mb-6 md:hidden">
+            <button onclick="openSidebar()" class="text-2xl p-2"><i class="fas fa-bars"></i></button>
+            <h2 class="font-bold text-lg">BikeShop Admin</h2>
+        </div>
+
+        <!-- ========== DASHBOARD ========== -->
+        <div id="seccion-dashboard" class="section-page">
+            <h1 class="text-2xl md:text-3xl font-bold mb-6">Dashboard</h1>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="dashboardCards"></div>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="card bg-white rounded-xl shadow p-5">
+                    <h3 class="font-bold text-lg mb-3">Pedidos recientes</h3>
+                    <div id="recentOrders" class="space-y-2"></div>
+                </div>
+                <div class="card bg-white rounded-xl shadow p-5">
+                    <h3 class="font-bold text-lg mb-3">Clientes nuevos</h3>
+                    <div id="recentClients" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== CLIENTES ========== -->
+        <div id="seccion-clientes" class="section-page hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold">Clientes</h1>
+                <button onclick="openClientForm()" class="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition">
+                    <i class="fas fa-plus mr-2"></i> Nuevo Cliente
+                </button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="clientSearch" placeholder="Buscar por nombre o WhatsApp..."
+                class="w-full md:w-80 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500" oninput="renderClients()">
+            </div>
+            <div class="card bg-white rounded-xl shadow overflow-x-auto">
+                <table class="w-full min-w-[600px]">
+                    <thead class="bg-gray-100 text-left">
+                        <tr><th class="p-3">Nombre</th><th class="p-3">WhatsApp</th><th class="p-3">Correo</th><th class="p-3">Dirección</th><th class="p-3">Acciones</th></tr>
+                    </thead>
+                    <tbody id="clientsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== PEDIDOS ========== -->
+        <div id="seccion-pedidos" class="section-page hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold">Pedidos / Solicitudes</h1>
+                <button onclick="openOrderForm()" class="bg-orange-500 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition">
+                    <i class="fas fa-plus mr-2"></i> Nuevo Pedido
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button onclick="filterOrders('todos', event)" data-filter="todos" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn bg-orange-500 text-white">Todos</button>
+                <button onclick="filterOrders('pendiente', event)" data-filter="pendiente" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Pendientes</button>
+                <button onclick="filterOrders('confirmado', event)" data-filter="confirmado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Confirmados</button>
+                <button onclick="filterOrders('en entrega', event)" data-filter="en entrega" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">En entrega</button>
+                <button onclick="filterOrders('entregado', event)" data-filter="entregado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Entregados</button>
+                <button onclick="filterOrders('atendida', event)" data-filter="atendida" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Atendidas</button>
+                <button onclick="filterOrders('cancelado', event)" data-filter="cancelado" type="button" class="px-4 py-1.5 rounded-full text-sm border order-filter-btn">Cancelados</button>
+            </div>
+            <div class="card bg-white rounded-xl shadow overflow-x-auto">
+                <table class="w-full min-w-[700px]">
+                    <thead class="bg-gray-100 text-left">
+                        <tr><th class="p-3"># Pedido</th><th class="p-3">Cliente</th><th class="p-3">Productos</th><th class="p-3">Total</th><th class="p-3">Entrega</th><th class="p-3">Estado</th><th class="p-3">Acciones</th></tr>
+                    </thead>
+                    <tbody id="ordersTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== FACTURACIÓN ========== -->
+        <div id="seccion-facturacion" class="section-page hidden">
+            <h1 class="text-2xl md:text-3xl font-bold mb-6">Facturación</h1>
+            <div class="card bg-white rounded-xl shadow overflow-x-auto">
+                <table class="w-full min-w-[600px]">
+                    <thead class="bg-gray-100 text-left">
+                        <tr><th class="p-3"># Factura</th><th class="p-3">Fecha</th><th class="p-3">Cliente</th><th class="p-3">Pedido</th><th class="p-3">Total</th><th class="p-3">Pago</th><th class="p-3">Acciones</th></tr>
+                    </thead>
+                    <tbody id="invoicesTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== CONFIGURACIÓN ========== -->
+        <div id="seccion-configuracion" class="section-page hidden">
+            <h1 class="text-2xl md:text-3xl font-bold mb-6">Configuración</h1>
+            <form onsubmit="saveConfig(event)" class="card bg-white rounded-xl shadow p-6 max-w-2xl space-y-4">
+                <div>
+                    <label class="block font-semibold mb-1">Nombre de la tienda</label>
+                    <input type="text" id="configStoreName" class="w-full border rounded-lg px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Lema / tagline de la marca</label>
+                    <input type="text" id="configBrandTagline" class="w-full border rounded-lg px-4 py-2.5" placeholder="Ej. Tu taller de confianza">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold mb-1">Color primario</label>
+                        <input type="color" id="configBrandPrimary" class="w-full h-12 border rounded-lg p-1">
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Color secundario</label>
+                        <input type="color" id="configBrandAccent" class="w-full h-12 border rounded-lg p-1">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Teléfono / WhatsApp</label>
+                    <input type="text" id="configPhone" class="w-full border rounded-lg px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Correo electrónico</label>
+                    <input type="email" id="configEmail" class="w-full border rounded-lg px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Dirección</label>
+                    <input type="text" id="configAddress" class="w-full border rounded-lg px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Políticas de entrega</label>
+                    <textarea id="configPolicy" rows="3" class="w-full border rounded-lg px-4 py-2.5"></textarea>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Mensaje prefijado WhatsApp</label>
+                    <input type="text" id="configWaMessage" class="w-full border rounded-lg px-4 py-2.5" placeholder="Hola, tu pedido está...">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Logo (URL)</label>
+                    <input type="url" id="configLogoUrl" placeholder="https://tusitio.com/logo.png" class="w-full border rounded-lg px-4 py-2.5" oninput="document.getElementById('configLogoPreview').src=this.value">
+                    <img id="configLogoPreview" src="" alt="preview" class="mt-2" style="max-width:120px;display:none;border-radius:8px;" onerror="this.style.display='none'" onload="this.style.display='block'">
+                </div>
+                <button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600">Guardar Configuración</button>
+                    <div class="flex gap-2 mt-3">
+                        <button type="button" onclick="exportConfig()" class="bg-gray-200 text-gray-800 px-4 py-2 rounded">Exportar configuración</button>
+                        <button type="button" onclick="document.getElementById('importConfigFile').click()" class="bg-gray-200 text-gray-800 px-4 py-2 rounded">Importar configuración</button>
+                        <input type="file" id="importConfigFile" accept="application/json" style="display:none" onchange="importConfigFile(event)">
+                    </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== MODALES ========== -->
+    <!-- Modal Cliente -->
+    <div id="clientModal" class="modal-overlay hidden">
+        <div class="modal-content p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Registrar Cliente</h3>
+                <button onclick="closeClientModal()" class="text-2xl"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="saveClient(event)" class="space-y-3">
+                <input type="hidden" id="editClientId">
+                <input type="text" id="clientName" placeholder="Nombre completo *" required class="w-full border rounded-lg px-4 py-2.5">
+                <input type="tel" id="clientPhone" placeholder="WhatsApp *" required class="w-full border rounded-lg px-4 py-2.5">
+                <input type="email" id="clientEmail" placeholder="Correo electrónico" class="w-full border rounded-lg px-4 py-2.5">
+                <input type="text" id="clientAddress" placeholder="Dirección de entrega" class="w-full border rounded-lg px-4 py-2.5">
+                <button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold w-full">Guardar Cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Pedido -->
+    <div id="orderModal" class="modal-overlay hidden">
+        <div class="modal-content p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Nuevo Pedido</h3>
+                <button onclick="closeOrderModal()" class="text-2xl"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="saveOrder(event)" class="space-y-3">
+                <input type="hidden" id="editOrderId">
+                <div>
+                    <label class="block font-semibold mb-1">Cliente *</label>
+                    <select id="orderClient" required class="w-full border rounded-lg px-4 py-2.5"></select>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Productos solicitados *</label>
+                    <textarea id="orderProducts" placeholder="Ej: Frenos Shimano x2, Cadena KMC x1" required class="w-full border rounded-lg px-4 py-2.5" rows="2"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold mb-1">Cantidad total</label>
+                        <input type="number" id="orderQty" value="1" min="1" class="w-full border rounded-lg px-4 py-2.5">
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Total estimado $</label>
+                        <input type="number" step="0.01" id="orderTotal" class="w-full border rounded-lg px-4 py-2.5">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold mb-1">Método de entrega</label>
+                        <select id="orderDelivery" class="w-full border rounded-lg px-4 py-2.5">
+                            <option value="tienda">Retiro en tienda</option>
+                            <option value="domicilio">Entrega a domicilio</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Estado</label>
+                        <select id="orderStatus" class="w-full border rounded-lg px-4 py-2.5">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmado">Confirmado</option>
+                            <option value="en entrega">En entrega</option>
+                            <option value="entregado">Entregado</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Fecha de entrega prevista</label>
+                    <input type="date" id="orderDeliveryDate" class="w-full border rounded-lg px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Notas internas</label>
+                    <textarea id="orderNotes" rows="2" class="w-full border rounded-lg px-4 py-2.5"></textarea>
+                </div>
+                <button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold w-full">Guardar Pedido</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Factura -->
+    <div id="invoiceModal" class="modal-overlay hidden">
+        <div class="modal-content p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Generar Factura</h3>
+                <button onclick="closeInvoiceModal()" class="text-2xl"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="saveInvoice(event)" class="space-y-3">
+                <input type="hidden" id="invoiceOrderId">
+                <div>
+                    <label class="block font-semibold mb-1">Pedido origen</label>
+                    <input type="text" id="invoiceOrderDisplay" disabled class="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Cliente</label>
+                    <input type="text" id="invoiceClientDisplay" disabled class="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Detalle de productos</label>
+                    <textarea id="invoiceDetail" rows="2" class="w-full border rounded-lg px-4 py-2.5"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold mb-1">Total $</label>
+                        <input type="number" step="0.01" id="invoiceTotal" class="w-full border rounded-lg px-4 py-2.5">
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Estado de pago</label>
+                        <select id="invoicePayment" class="w-full border rounded-lg px-4 py-2.5">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="pagado">Pagado</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold w-full">Emitir Factura</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
