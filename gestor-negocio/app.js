@@ -222,13 +222,20 @@ function navigateTo(section) {
 }
 
 function openSidebar() {
-  document.getElementById('sidebar').classList.add('open');
-  document.getElementById('sidebarOverlay').classList.remove('hidden');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (!sidebar || !overlay) return;
+  sidebar.classList.add('open');
+  overlay.classList.remove('hidden');
+  document.body.classList.add('menu-open');
 }
 
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.add('hidden');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.add('hidden');
+  document.body.classList.remove('menu-open');
 }
 
 function renderDashboard() {
@@ -757,6 +764,8 @@ function init() {
   navigateTo('dashboard');
   loadConfig();
   document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+  const mobileMenuButton = document.querySelector('.mobile-menu-button');
+  if (mobileMenuButton) mobileMenuButton.addEventListener('click', openSidebar);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       document.querySelectorAll('.modal-overlay').forEach((modal) => modal.classList.add('hidden'));
